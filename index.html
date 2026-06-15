@@ -17,18 +17,23 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
   body{font-family:'Gowun Dodum',system-ui,sans-serif;background:var(--paper);color:var(--ink);padding-bottom:90px;line-height:1.5;}
-  header{background:var(--forest);color:#f3efe4;padding:22px 20px 18px;position:sticky;top:0;z-index:30;box-shadow:0 6px 18px -12px rgba(0,0,0,.5);}
-  .eyebrow{font-size:11px;letter-spacing:.32em;opacity:.6;margin:0 0 4px;display:flex;align-items:center;gap:8px;}
+  header{background:var(--forest);color:#f3efe4;padding:12px 18px 12px;position:sticky;top:0;z-index:30;box-shadow:0 6px 18px -12px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .head-left{min-width:0;}
+  .eyebrow{font-size:10px;letter-spacing:.28em;opacity:.6;margin:0 0 2px;display:flex;align-items:center;gap:7px;}
   .sync-dot{width:8px;height:8px;border-radius:50%;background:#7ea98a;display:inline-block;}
   .sync-dot.off{background:#c2683b;}
   .sync-dot.busy{background:#d8b24a;animation:pulse 1s infinite;}
+  header h1{font-family:'Black Han Sans',sans-serif;font-weight:400;margin:0;font-size:21px;letter-spacing:-.5px;}
+  .legend{display:flex;gap:12px;margin-top:7px;flex-wrap:wrap;font-size:11px;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;opacity:.92;}
+  .profile{flex:0 0 auto;width:52px;height:52px;border-radius:50%;border:2px solid rgba(243,239,228,.5);background:rgba(243,239,228,.12);color:#f3efe4;font-size:22px;cursor:pointer;overflow:hidden;padding:0;display:flex;align-items:center;justify-content:center;}
+  .profile img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+  .profile:active{transform:scale(.95);}
   @keyframes pulse{50%{opacity:.3;}}
-  header h1{font-family:'Black Han Sans',sans-serif;font-weight:400;margin:0;font-size:27px;letter-spacing:-.5px;}
-  .legend{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;font-size:12px;}
   .legend span{display:inline-flex;align-items:center;gap:5px;opacity:.92;}
   .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
   .d-s{background:var(--sojung);} .d-h{background:var(--heejung);} .d-m{background:var(--mina);} .d-b{background:var(--byounggon);}
-  .days{display:flex;gap:7px;overflow-x:auto;padding:12px 16px;position:sticky;top:104px;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);scrollbar-width:none;}
+  .days{display:flex;gap:7px;overflow-x:auto;padding:12px 16px;position:sticky;top:76px;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);scrollbar-width:none;}
   .days::-webkit-scrollbar{display:none;}
   .day-pill{flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 15px;font-size:14px;color:var(--ink);cursor:pointer;transition:.15s;font-family:'Gowun Dodum';}
   .day-pill.active{background:var(--forest);color:#f3efe4;border-color:var(--forest);}
@@ -85,6 +90,13 @@
   .bitem .bl{font-size:10px;color:#9a917c;margin-top:2px;}
   .bcol-empty{font-size:11px;color:#cbc3af;text-align:center;padding:8px 0;}
   .board-hint{font-size:11px;color:#9a917c;text-align:center;margin:2px 0 8px;}
+  /* 픽업 표시 */
+  .pk-badge{display:block;margin-top:4px;font-size:10px;font-weight:700;color:#fff;background:#c2683b;border-radius:999px;padding:2px 0;}
+  .bcol.pickup{background:#faf0e8;border-color:#e3b394;}
+  .bitem.pu{background:#fdf2ea;}
+  .pu-tag{font-size:11px;}
+  .pk-check{display:flex;align-items:center;gap:8px;margin-top:14px!important;font-size:14px;color:var(--ink)!important;cursor:pointer;}
+  .pk-check input{width:auto!important;}
   .add-fab{position:fixed;right:18px;bottom:84px;z-index:35;background:var(--forest);color:#f3efe4;border:none;width:54px;height:54px;border-radius:50%;font-size:26px;box-shadow:0 8px 20px -8px rgba(31,58,46,.6);cursor:pointer;}
   .add-fab:active{transform:scale(.95);}
   .savebar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px env(safe-area-inset-bottom,12px);display:flex;gap:10px;align-items:center;z-index:40;box-shadow:0 -8px 20px -16px rgba(0,0,0,.4);}
@@ -121,14 +133,21 @@
 </head>
 <body>
 <header>
-  <p class="eyebrow"><span class="sync-dot off" id="syncDot"></span><span id="syncLabel">연결 안 됨</span></p>
-  <h1>우리집 주간 스케줄</h1>
-  <div class="legend">
-    <span><i class="dot d-s"></i>소정</span>
-    <span><i class="dot d-h"></i>희정</span>
-    <span><i class="dot d-m"></i>민아</span>
-    <span><i class="dot d-b"></i>병곤</span>
+  <div class="head-left">
+    <p class="eyebrow"><span class="sync-dot off" id="syncDot"></span><span id="syncLabel">연결 안 됨</span></p>
+    <h1>우리집 주간 스케줄</h1>
+    <div class="legend">
+      <span><i class="dot d-s"></i>소정</span>
+      <span><i class="dot d-h"></i>희정</span>
+      <span><i class="dot d-m"></i>민아</span>
+      <span><i class="dot d-b"></i>병곤</span>
+    </div>
   </div>
+  <button class="profile" id="profileBtn" title="가족 사진">
+    <img id="profileImg" alt="" style="display:none">
+    <span id="profilePlus">＋</span>
+  </button>
+  <input type="file" id="profileFile" accept="image/*" style="display:none">
 </header>
 
 <div id="setup" class="setup" style="display:none">
@@ -171,6 +190,7 @@
     <input type="text" id="mAct" placeholder="예) 박윤 영어, 플라잉 요가, 골프 라운딩">
     <label>장소</label>
     <input type="text" id="mLoc" placeholder="예) ○○빌딩 3층 / 학교 정문">
+    <label class="pk-check"><input type="checkbox" id="mPickup"> 🚗 픽업 필요한 일정</label>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="mCancel">취소</button>
       <button class="btn btn-primary" id="mSave">저장</button>
@@ -204,7 +224,7 @@ const SEED=[
 ].map(r=>({day:r[0],person:r[1],start:r[2],end:r[3],act:r[4],loc:r[5]}));
 
 const API_KEY='family_schedule_api';
-let API='', items=[], current='mon', editCtx=null, pickPerson='sojung';
+let API='', items=[], current='all', editCtx=null, pickPerson='sojung';
 
 // ---- API helpers ----
 function getApiFromUrl(){
@@ -239,10 +259,51 @@ async function boot(){
   localStorage.setItem(API_KEY,API);
   document.getElementById('app').style.display='block';
   setPerson('sojung');
+  loadPhoto();
   await refresh(true);
   // 주기적 자동 동기화 (15초)
   setInterval(()=>refresh(false),15000);
 }
+
+// ---- 가족사진 ----
+function showPhoto(src){
+  const img=document.getElementById('profileImg'),plus=document.getElementById('profilePlus');
+  if(src){img.src=src;img.style.display='block';plus.style.display='none';}
+  else{img.style.display='none';plus.style.display='block';}
+}
+async function loadPhoto(){
+  // 먼저 로컬 캐시로 즉시 표시, 그 뒤 서버값으로 갱신
+  const cached=localStorage.getItem('family_photo');
+  if(cached)showPhoto(cached);
+  try{
+    const r=await fetch(API+'?action=getmeta');
+    const j=await r.json();
+    if(j.ok&&j.photo){showPhoto(j.photo);localStorage.setItem('family_photo',j.photo);}
+  }catch(e){}
+}
+document.getElementById('profileBtn').onclick=()=>document.getElementById('profileFile').click();
+document.getElementById('profileFile').onchange=function(){
+  const f=this.files&&this.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const im=new Image();
+    im.onload=async()=>{
+      // 정사각 썸네일로 축소 (200px) → 용량 줄이기
+      const S=200,cv=document.createElement('canvas');cv.width=S;cv.height=S;
+      const ctx=cv.getContext('2d');
+      const side=Math.min(im.width,im.height);
+      const sx=(im.width-side)/2,sy=(im.height-side)/2;
+      ctx.drawImage(im,sx,sy,side,side,0,0,S,S);
+      const data=cv.toDataURL('image/jpeg',0.8);
+      showPhoto(data);localStorage.setItem('family_photo',data);
+      setSync('busy');
+      try{await apiPost('setmeta',{photo:data});setSync('ok');toast('가족사진 저장됨');}
+      catch(err){setSync('off');toast('사진 저장 실패');}
+    };
+    im.src=e.target.result;
+  };
+  reader.readAsDataURL(f);
+};
 async function refresh(seedIfEmpty){
   setSync('busy');
   try{
@@ -281,6 +342,9 @@ function buildNav(){
   });
 }
 function timelineFor(dayKey){return items.filter(it=>it.day===dayKey).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
+// 픽업 필요 여부: 내용에 '픽업'이 들어있거나 loc에 [픽업] 표시가 있으면 true
+function isPickup(it){return /픽업/.test((it.act||'')+' '+(it.loc||''));}
+function dayHasPickup(dayKey){return timelineFor(dayKey).some(isPickup);}
 function rowHtml(it){
   const p=PEOPLE[it.person]||{name:it.person,cls:'s'};
   return '<div class="tl-row">'+
@@ -303,14 +367,17 @@ function render(){
     html+='<div class="board">';
     DAYS.forEach(d=>{
       const tl=timelineFor(d.k);
-      html+='<div class="bcol'+(d.k===today?' today':'')+'">';
-      html+='<div class="bcol-h">'+d.pill+'<span class="en">'+d.en+'</span></div>';
+      const pk=dayHasPickup(d.k);
+      html+='<div class="bcol'+(d.k===today?' today':'')+(pk?' pickup':'')+'">';
+      html+='<div class="bcol-h">'+d.pill+'<span class="en">'+d.en+'</span>'+
+        (pk?'<span class="pk-badge">🚗 픽업</span>':'')+'</div>';
       if(tl.length===0){html+='<div class="bcol-empty">—</div>';}
       else{
         tl.forEach(it=>{
           const p=PEOPLE[it.person]||{name:it.person,cls:'s'};
-          html+='<div class="bitem '+p.cls+'" data-id="'+it.id+'">'+
-            '<div class="bt">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</div>'+
+          const pu=isPickup(it);
+          html+='<div class="bitem '+p.cls+(pu?' pu':'')+'" data-id="'+it.id+'">'+
+            '<div class="bt">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+(pu?' <span class="pu-tag">🚗</span>':'')+'</div>'+
             '<span class="bn '+p.cls+'">'+p.name+'</span>'+
             '<div class="ba">'+escapeHtml(it.act||'')+'</div>'+
             (it.loc?'<div class="bl">📍 '+escapeHtml(it.loc)+'</div>':'')+
@@ -374,6 +441,7 @@ function openEdit(id){
   document.getElementById('mEnd').value=it.end||'';
   document.getElementById('mAct').value=it.act||'';
   document.getElementById('mLoc').value=it.loc||'';
+  document.getElementById('mPickup').checked=!isNew&&isPickup(it);
   document.getElementById('modalBg').classList.add('show');
 }
 function closeModal(){document.getElementById('modalBg').classList.remove('show');editCtx=null;}
@@ -384,8 +452,12 @@ document.getElementById('mSave').onclick=async()=>{
   const day=document.getElementById('mDay').value;
   const start=document.getElementById('mStart').value;
   const end=document.getElementById('mEnd').value;
-  const act=document.getElementById('mAct').value.trim();
+  let act=document.getElementById('mAct').value.trim();
   const loc=document.getElementById('mLoc').value.trim();
+  const wantPickup=document.getElementById('mPickup').checked;
+  // 픽업 체크 상태를 내용에 반영 ('픽업🚗' 마커)
+  act=act.replace(/\s*\(?픽업🚗?\)?/g,'').trim(); // 기존 마커 제거
+  if(wantPickup)act=act+(act?' ':'')+'(픽업🚗)';
   if(!start&&!act){closeModal();return;}
   setSync('busy');
   if(editCtx){
@@ -411,7 +483,7 @@ function escapeHtml(s){return(s+'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;'
 function escapeAttr(s){return(s+'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 
 function todayKey(){const map=['sun','mon','tue','wed','thu','fri','sat'];return map[new Date().getDay()];}
-(function(){const t=todayKey();if(DAYS.find(d=>d.k===t))current=t;})();
+// 기본은 전체 보드. (요일 탭을 누르면 하루 보기로 전환)
 boot();
 </script>
 </body>
