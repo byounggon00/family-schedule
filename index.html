@@ -42,6 +42,7 @@
   main{padding:16px 16px 0;max-width:680px;margin:0 auto;}
   .day-title{font-family:'Gowun Batang',serif;font-weight:700;font-size:20px;margin:4px 2px 16px;display:flex;align-items:baseline;gap:8px;}
   .day-title .en{font-family:'Gowun Dodum';font-size:12px;letter-spacing:.2em;color:#9a917c;}
+  .dtitle-date{font-family:'Gowun Dodum';font-size:14px;font-weight:400;color:#9a917c;}
   .timeline{position:relative;}
   .tl-row{display:flex;gap:12px;align-items:flex-start;}
   .tl-time{flex:0 0 58px;text-align:right;padding-top:11px;font-weight:700;font-size:13px;color:var(--forest);font-variant-numeric:tabular-nums;}
@@ -77,6 +78,8 @@
   .bcol.today{border-color:var(--forest);box-shadow:0 0 0 1px var(--forest);}
   .bcol-h{text-align:center;font-weight:700;font-size:13px;padding:4px 0 8px;border-bottom:1px solid var(--line);margin-bottom:8px;}
   .bcol-h .en{display:block;font-size:9px;letter-spacing:.15em;color:#9a917c;font-weight:400;}
+  .bcol-h .bdate{font-size:11px;color:#9a917c;font-weight:400;}
+  .bcol.today .bcol-h .bdate{color:var(--forest);}
   .bcol.today .bcol-h{color:var(--forest);}
   .bitem{border-radius:8px;padding:6px 7px;margin-bottom:6px;cursor:pointer;border-left:3px solid;background:var(--paper);}
   .bitem.s{border-left-color:var(--sojung);}
@@ -375,7 +378,7 @@ function render(){
     DAYS.forEach(d=>{
       const tl=timelineFor(d.k);
       html+='<div class="bcol'+(d.k===today?' today':'')+'">';
-      html+='<div class="bcol-h">'+d.pill+'<span class="en">'+d.en+'</span></div>';
+      html+='<div class="bcol-h">'+d.pill+' <span class="bdate">'+dateForDay(d.k)+'</span><span class="en">'+d.en+'</span></div>';
       if(tl.length===0){html+='<div class="bcol-empty">—</div>';}
       else{
         tl.forEach(it=>{
@@ -398,7 +401,7 @@ function render(){
   }
   {
     const d=DAYS.find(x=>x.k===current);
-    html='<div class="day-title">'+d.ko+'<span class="en">'+d.en+'</span></div>';
+    html='<div class="day-title">'+d.ko+' <span class="dtitle-date">'+dateForDay(current)+'</span><span class="en">'+d.en+'</span></div>';
     const tl=timelineFor(current);
     if(tl.length===0){html+='<div class="empty">— 일정이 없습니다 —<br>＋ 버튼으로 추가하세요</div>';main.innerHTML=html;return;}
     html+='<div class="timeline">'+tl.map(rowHtml).join('')+'</div>';
@@ -498,6 +501,20 @@ function escapeHtml(s){return(s+'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;'
 function escapeAttr(s){return(s+'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 
 function todayKey(){const map=['sun','mon','tue','wed','thu','fri','sat'];return map[new Date().getDay()];}
+// 이번 주(월~일)에서 요일키에 해당하는 날짜를 "M/D"로 반환
+function dateForDay(dayKey){
+  try{
+    const order=['mon','tue','wed','thu','fri','sat','sun'];
+    const idx=order.indexOf(dayKey);
+    if(idx<0)return '';
+    const now=new Date();
+    const dow=now.getDay();
+    const offsetToMon=(dow===0?-6:1-dow);
+    const mon=new Date(now);mon.setDate(now.getDate()+offsetToMon);
+    const d=new Date(mon);d.setDate(mon.getDate()+idx);
+    return (d.getMonth()+1)+'/'+d.getDate();
+  }catch(e){return '';}
+}
 // 기본은 전체 보드. (요일 탭을 누르면 하루 보기로 전환)
 boot();
 </script>
