@@ -77,7 +77,7 @@
   @keyframes slideup{from{transform:translateY(40px);opacity:.6;}to{transform:none;opacity:1;}}
   .modal h3{margin:0 0 14px;font-family:'Gowun Batang';font-size:18px;}
   .modal label{font-size:12px;color:#9a917c;display:block;margin:10px 0 4px;}
-  .modal input{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px;font-family:'Gowun Dodum';font-size:15px;background:#fff;color:var(--ink);}
+  .modal input,.modal select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px;font-family:'Gowun Dodum';font-size:15px;background:#fff;color:var(--ink);}
   .seg{display:flex;gap:7px;flex-wrap:wrap;}
   .seg button{flex:1;min-width:60px;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px;font-family:'Gowun Dodum';font-size:14px;cursor:pointer;color:var(--ink);}
   .seg button.on{color:#fff;border-color:transparent;}
@@ -133,6 +133,8 @@
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <h3 id="modalTitle">일정 추가</h3>
+    <label>요일</label>
+    <select id="mDay"></select>
     <label>누구</label>
     <div class="seg" id="segPerson">
       <button data-p="sojung" class="p-s">소정</button>
@@ -242,30 +244,56 @@ document.getElementById('apiSave').onclick=()=>{
 };
 
 // ---- rendering ----
-function buildNav(){const nav=document.getElementById('dayNav');nav.innerHTML='';DAYS.forEach(d=>{const b=document.createElement('button');b.className='day-pill'+(d.k===current?' active':'');b.innerHTML=d.pill+'<span class="wk">'+d.en+'</span>';b.onclick=()=>{current=d.k;render();};nav.appendChild(b);});}
-function getTimeline(){return items.filter(it=>it.day===current).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
+function buildNav(){
+  const nav=document.getElementById('dayNav');nav.innerHTML='';
+  const all=document.createElement('button');
+  all.className='day-pill'+(current==='all'?' active':'');
+  all.innerHTML='전체<span class="wk">ALL</span>';
+  all.onclick=()=>{current='all';render();};
+  nav.appendChild(all);
+  DAYS.forEach(d=>{
+    const b=document.createElement('button');
+    b.className='day-pill'+(d.k===current?' active':'');
+    b.innerHTML=d.pill+'<span class="wk">'+d.en+'</span>';
+    b.onclick=()=>{current=d.k;render();};
+    nav.appendChild(b);
+  });
+}
+function timelineFor(dayKey){return items.filter(it=>it.day===dayKey).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
+function rowHtml(it){
+  const p=PEOPLE[it.person]||{name:it.person,cls:'s'};
+  return '<div class="tl-row">'+
+    '<div class="tl-time">'+escapeHtml(it.start||'')+(it.end?'<span class="end">~'+escapeHtml(it.end)+'</span>':'')+'</div>'+
+    '<div class="tl-line"><span class="tl-dot dot-'+p.cls+'"></span></div>'+
+    '<div class="tl-body"><div class="card '+p.cls+'" data-id="'+it.id+'">'+
+      '<button class="del-btn">×</button>'+
+      '<span class="who who-'+p.cls+'">'+p.name+'</span>'+
+      '<div class="act">'+escapeHtml(it.act||'')+'</div>'+
+      '<div class="loc-row"><span class="pin">📍</span><input class="loc-input" placeholder="장소 입력" value="'+escapeAttr(it.loc||'')+'"></div>'+
+    '</div></div></div>';
+}
 function render(){
   buildNav();
   const main=document.getElementById('main');main.innerHTML='';
-  const d=DAYS.find(x=>x.k===current);
-  let html='<div class="day-title">'+d.ko+'<span class="en">'+d.en+'</span></div>';
-  const tl=getTimeline();
-  if(tl.length===0){html+='<div class="empty">— 일정이 없습니다 —<br>＋ 버튼으로 추가하세요</div>';main.innerHTML=html;return;}
-  html+='<div class="timeline">';
-  tl.forEach(it=>{
-    const p=PEOPLE[it.person]||{name:it.person,cls:'s'};
-    html+='<div class="tl-row">'+
-      '<div class="tl-time">'+escapeHtml(it.start||'')+(it.end?'<span class="end">~'+escapeHtml(it.end)+'</span>':'')+'</div>'+
-      '<div class="tl-line"><span class="tl-dot dot-'+p.cls+'"></span></div>'+
-      '<div class="tl-body"><div class="card '+p.cls+'" data-id="'+it.id+'">'+
-        '<button class="del-btn">×</button>'+
-        '<span class="who who-'+p.cls+'">'+p.name+'</span>'+
-        '<div class="act">'+escapeHtml(it.act||'')+'</div>'+
-        '<div class="loc-row"><span class="pin">📍</span><input class="loc-input" placeholder="장소 입력" value="'+escapeAttr(it.loc||'')+'"></div>'+
-      '</div></div></div>';
-  });
-  html+='</div>';
+  let html='';
+  if(current==='all'){
+    DAYS.forEach(d=>{
+      const tl=timelineFor(d.k);
+      html+='<div class="day-title">'+d.ko+'<span class="en">'+d.en+'</span></div>';
+      if(tl.length===0){html+='<div class="empty" style="padding:8px 2px 18px">— 일정 없음 —</div>';}
+      else{html+='<div class="timeline" style="margin-bottom:14px">'+tl.map(rowHtml).join('')+'</div>';}
+    });
+  }else{
+    const d=DAYS.find(x=>x.k===current);
+    html='<div class="day-title">'+d.ko+'<span class="en">'+d.en+'</span></div>';
+    const tl=timelineFor(current);
+    if(tl.length===0){html+='<div class="empty">— 일정이 없습니다 —<br>＋ 버튼으로 추가하세요</div>';main.innerHTML=html;return;}
+    html+='<div class="timeline">'+tl.map(rowHtml).join('')+'</div>';
+  }
   main.innerHTML=html;
+  bindCards(main);
+}
+function bindCards(main){
   main.querySelectorAll('.card').forEach(card=>{
     const id=card.dataset.id;
     const it=items.find(x=>x.id===id);
@@ -292,8 +320,14 @@ function openEdit(id){
   editCtx=id||null;
   const isNew=!id;
   document.getElementById('modalTitle').textContent=isNew?'일정 추가':'일정 수정';
-  let it={person:'sojung',start:'',end:'',act:'',loc:''};
+  let it={person:'sojung',start:'',end:'',act:'',loc:'',day:''};
   if(!isNew)it=items.find(x=>x.id===id)||it;
+  // 요일 드롭다운 채우기
+  const sel=document.getElementById('mDay');
+  sel.innerHTML=DAYS.map(d=>'<option value="'+d.k+'">'+d.ko+'</option>').join('');
+  // 기본 요일: 수정이면 그 일정 요일, 추가면 현재 보는 요일(전체면 오늘)
+  let defDay=it.day||(current==='all'?todayKey():current);
+  sel.value=defDay;
   setPerson(it.person||'sojung');
   document.getElementById('mStart').value=it.start||'';
   document.getElementById('mEnd').value=it.end||'';
@@ -306,6 +340,7 @@ document.getElementById('fab').onclick=()=>openEdit(null);
 document.getElementById('mCancel').onclick=closeModal;
 document.getElementById('modalBg').onclick=e=>{if(e.target.id==='modalBg')closeModal();};
 document.getElementById('mSave').onclick=async()=>{
+  const day=document.getElementById('mDay').value;
   const start=document.getElementById('mStart').value;
   const end=document.getElementById('mEnd').value;
   const act=document.getElementById('mAct').value.trim();
@@ -314,10 +349,10 @@ document.getElementById('mSave').onclick=async()=>{
   setSync('busy');
   if(editCtx){
     const it=items.find(x=>x.id===editCtx);
-    Object.assign(it,{person:pickPerson,start,end,act,loc,day:current});
+    Object.assign(it,{person:pickPerson,start,end,act,loc,day});
     await apiPost('update',it);
   }else{
-    const body={day:current,person:pickPerson,start,end,act,loc};
+    const body={day,person:pickPerson,start,end,act,loc};
     const j=await apiPost('add',body);
     if(j.ok)items.push(Object.assign(body,{id:j.id}));
   }
@@ -334,7 +369,8 @@ function copyText(t){navigator.clipboard.writeText(t).then(()=>toast('공유 링
 function escapeHtml(s){return(s+'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function escapeAttr(s){return(s+'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 
-(function(){const map=['sun','mon','tue','wed','thu','fri','sat'];const t=map[new Date().getDay()];if(DAYS.find(d=>d.k===t))current=t;})();
+function todayKey(){const map=['sun','mon','tue','wed','thu','fri','sat'];return map[new Date().getDay()];}
+(function(){const t=todayKey();if(DAYS.find(d=>d.k===t))current=t;})();
 boot();
 </script>
 </body>
