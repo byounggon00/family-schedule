@@ -64,6 +64,27 @@
   .del-btn{position:absolute;top:7px;right:7px;border:none;background:transparent;color:#cbc3af;font-size:18px;line-height:1;cursor:pointer;padding:4px;}
   .del-btn:active{color:var(--sojung);}
   .empty{color:#bdb6a3;font-size:14px;padding:20px 2px;text-align:center;}
+  /* 주간 보드 (가로 7칸) */
+  .board{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;scrollbar-width:thin;-webkit-overflow-scrolling:touch;}
+  .board::-webkit-scrollbar{height:6px;}
+  .board::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+  .bcol{flex:0 0 130px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;}
+  .bcol.today{border-color:var(--forest);box-shadow:0 0 0 1px var(--forest);}
+  .bcol-h{text-align:center;font-weight:700;font-size:13px;padding:4px 0 8px;border-bottom:1px solid var(--line);margin-bottom:8px;}
+  .bcol-h .en{display:block;font-size:9px;letter-spacing:.15em;color:#9a917c;font-weight:400;}
+  .bcol.today .bcol-h{color:var(--forest);}
+  .bitem{border-radius:8px;padding:6px 7px;margin-bottom:6px;cursor:pointer;border-left:3px solid;background:var(--paper);}
+  .bitem.s{border-left-color:var(--sojung);}
+  .bitem.h{border-left-color:var(--heejung);}
+  .bitem.m{border-left-color:var(--mina);}
+  .bitem.b{border-left-color:var(--byounggon);}
+  .bitem .bt{font-size:11px;font-weight:700;color:var(--forest);font-variant-numeric:tabular-nums;}
+  .bitem .bn{font-size:10px;color:#fff;padding:1px 6px;border-radius:999px;display:inline-block;margin:2px 0;}
+  .bn.s{background:var(--sojung);} .bn.h{background:var(--heejung);} .bn.m{background:var(--mina);} .bn.b{background:var(--byounggon);}
+  .bitem .ba{font-size:12px;line-height:1.35;}
+  .bitem .bl{font-size:10px;color:#9a917c;margin-top:2px;}
+  .bcol-empty{font-size:11px;color:#cbc3af;text-align:center;padding:8px 0;}
+  .board-hint{font-size:11px;color:#9a917c;text-align:center;margin:2px 0 8px;}
   .add-fab{position:fixed;right:18px;bottom:84px;z-index:35;background:var(--forest);color:#f3efe4;border:none;width:54px;height:54px;border-radius:50%;font-size:26px;box-shadow:0 8px 20px -8px rgba(31,58,46,.6);cursor:pointer;}
   .add-fab:active{transform:scale(.95);}
   .savebar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px env(safe-area-inset-bottom,12px);display:flex;gap:10px;align-items:center;z-index:40;box-shadow:0 -8px 20px -16px rgba(0,0,0,.4);}
@@ -277,13 +298,33 @@ function render(){
   const main=document.getElementById('main');main.innerHTML='';
   let html='';
   if(current==='all'){
+    const today=todayKey();
+    html+='<div class="board-hint">← 좌우로 밀어서 모든 요일 보기 →</div>';
+    html+='<div class="board">';
     DAYS.forEach(d=>{
       const tl=timelineFor(d.k);
-      html+='<div class="day-title">'+d.ko+'<span class="en">'+d.en+'</span></div>';
-      if(tl.length===0){html+='<div class="empty" style="padding:8px 2px 18px">— 일정 없음 —</div>';}
-      else{html+='<div class="timeline" style="margin-bottom:14px">'+tl.map(rowHtml).join('')+'</div>';}
+      html+='<div class="bcol'+(d.k===today?' today':'')+'">';
+      html+='<div class="bcol-h">'+d.pill+'<span class="en">'+d.en+'</span></div>';
+      if(tl.length===0){html+='<div class="bcol-empty">—</div>';}
+      else{
+        tl.forEach(it=>{
+          const p=PEOPLE[it.person]||{name:it.person,cls:'s'};
+          html+='<div class="bitem '+p.cls+'" data-id="'+it.id+'">'+
+            '<div class="bt">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</div>'+
+            '<span class="bn '+p.cls+'">'+p.name+'</span>'+
+            '<div class="ba">'+escapeHtml(it.act||'')+'</div>'+
+            (it.loc?'<div class="bl">📍 '+escapeHtml(it.loc)+'</div>':'')+
+          '</div>';
+        });
+      }
+      html+='</div>';
     });
-  }else{
+    html+='</div>';
+    main.innerHTML=html;
+    main.querySelectorAll('.bitem').forEach(el=>{el.onclick=()=>openEdit(el.dataset.id);});
+    return;
+  }
+  {
     const d=DAYS.find(x=>x.k===current);
     html='<div class="day-title">'+d.ko+'<span class="en">'+d.en+'</span></div>';
     const tl=timelineFor(current);
