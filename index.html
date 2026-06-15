@@ -90,10 +90,12 @@
   .bitem .bl{font-size:10px;color:#9a917c;margin-top:2px;}
   .bcol-empty{font-size:11px;color:#cbc3af;text-align:center;padding:8px 0;}
   .board-hint{font-size:11px;color:#9a917c;text-align:center;margin:2px 0 8px;}
-  /* 픽업 표시 */
-  .bitem.pu{background:#fdf2ea;}
+  /* 픽업 표시 (진하게 강조) */
+  .bitem.pu{background:#f6d9c4;border-left-width:5px;}
+  .bitem.pu .bt{color:#a84a1f;}
   .pu-tag{font-size:11px;}
   .car-badge{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;color:#fff;background:var(--sojung);border-radius:999px;padding:2px 8px;vertical-align:middle;}
+  .card.pickup{background:#f6d9c4;border-color:#d98a5a;}
   .pk-check{display:flex;align-items:center;gap:8px;margin-top:14px!important;font-size:14px;color:var(--ink)!important;cursor:pointer;}
   .pk-check input{width:auto!important;}
   .add-fab{position:fixed;right:18px;bottom:84px;z-index:35;background:var(--forest);color:#f3efe4;border:none;width:54px;height:54px;border-radius:50%;font-size:26px;box-shadow:0 8px 20px -8px rgba(31,58,46,.6);cursor:pointer;}
@@ -121,6 +123,8 @@
   .row2>div{flex:1;}
   .modal-actions{display:flex;gap:10px;margin-top:18px;}
   .modal-actions .btn{flex:1;}
+  .btn-delete{width:100%;margin-top:10px;background:transparent;color:#c2683b;border:1px solid #e3b394;}
+  .btn-delete:active{background:#faf0e8;}
   .setup{padding:40px 24px;max-width:520px;margin:0 auto;text-align:center;}
   .setup h2{font-family:'Gowun Batang';}
   .setup p{color:#6b6452;font-size:14px;text-align:left;line-height:1.7;}
@@ -194,6 +198,7 @@
       <button class="btn btn-ghost" id="mCancel">취소</button>
       <button class="btn btn-primary" id="mSave">저장</button>
     </div>
+    <button class="btn btn-delete" id="mDelete">이 일정 삭제</button>
   </div>
 </div>
 
@@ -351,7 +356,7 @@ function rowHtml(it){
   return '<div class="tl-row">'+
     '<div class="tl-time">'+escapeHtml(it.start||'')+(it.end?'<span class="end">~'+escapeHtml(it.end)+'</span>':'')+'</div>'+
     '<div class="tl-line"><span class="tl-dot dot-'+p.cls+'"></span></div>'+
-    '<div class="tl-body"><div class="card '+p.cls+'" data-id="'+it.id+'">'+
+    '<div class="tl-body"><div class="card '+p.cls+(pu?' pickup':'')+'" data-id="'+it.id+'">'+
       '<button class="del-btn">×</button>'+
       '<span class="who who-'+p.cls+'">'+p.name+'</span>'+
       (pu?'<span class="car-badge">🚗 픽업</span>':'')+
@@ -439,14 +444,24 @@ function openEdit(id){
   setPerson(it.person||'sojung');
   document.getElementById('mStart').value=it.start||'';
   document.getElementById('mEnd').value=it.end||'';
-  document.getElementById('mAct').value=it.act||'';
+  document.getElementById('mAct').value=cleanAct(it.act);
   document.getElementById('mLoc').value=it.loc||'';
   document.getElementById('mPickup').checked=!isNew&&isPickup(it);
+  document.getElementById('mDelete').style.display=isNew?'none':'block';
   document.getElementById('modalBg').classList.add('show');
 }
 function closeModal(){document.getElementById('modalBg').classList.remove('show');editCtx=null;}
 document.getElementById('fab').onclick=()=>openEdit(null);
 document.getElementById('mCancel').onclick=closeModal;
+document.getElementById('mDelete').onclick=async()=>{
+  if(!editCtx)return;
+  if(!confirm('이 일정을 삭제할까요?'))return;
+  const id=editCtx;
+  setSync('busy');
+  await apiPost('delete',{id});
+  items=items.filter(x=>x.id!==id);
+  setSync('ok');closeModal();render();toast('삭제됨');
+};
 document.getElementById('modalBg').onclick=e=>{if(e.target.id==='modalBg')closeModal();};
 document.getElementById('mSave').onclick=async()=>{
   const day=document.getElementById('mDay').value;
