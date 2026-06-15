@@ -26,14 +26,14 @@
   header h1{font-family:'Black Han Sans',sans-serif;font-weight:400;margin:0;font-size:21px;letter-spacing:-.5px;}
   .legend{display:flex;gap:12px;margin-top:7px;flex-wrap:wrap;font-size:11px;}
   .legend span{display:inline-flex;align-items:center;gap:5px;opacity:.92;}
-  .profile{flex:0 0 auto;width:52px;height:52px;border-radius:50%;border:2px solid rgba(243,239,228,.5);background:rgba(243,239,228,.12);color:#f3efe4;font-size:22px;cursor:pointer;overflow:hidden;padding:0;display:flex;align-items:center;justify-content:center;}
+  .profile{flex:0 0 auto;width:64px;height:64px;border-radius:50%;border:2px solid rgba(243,239,228,.5);background:rgba(243,239,228,.12);color:#f3efe4;font-size:26px;cursor:pointer;overflow:hidden;padding:0;display:flex;align-items:center;justify-content:center;}
   .profile img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
   .profile:active{transform:scale(.95);}
   @keyframes pulse{50%{opacity:.3;}}
   .legend span{display:inline-flex;align-items:center;gap:5px;opacity:.92;}
   .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
   .d-s{background:var(--sojung);} .d-h{background:var(--heejung);} .d-m{background:var(--mina);} .d-b{background:var(--byounggon);}
-  .days{display:flex;gap:7px;overflow-x:auto;padding:12px 16px;position:sticky;top:76px;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);scrollbar-width:none;}
+  .days{display:flex;gap:7px;overflow-x:auto;padding:12px 16px;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);scrollbar-width:none;}
   .days::-webkit-scrollbar{display:none;}
   .day-pill{flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 15px;font-size:14px;color:var(--ink);cursor:pointer;transition:.15s;font-family:'Gowun Dodum';}
   .day-pill.active{background:var(--forest);color:#f3efe4;border-color:var(--forest);}
@@ -91,6 +91,19 @@
   .bn.s{background:var(--sojung);} .bn.h{background:var(--heejung);} .bn.m{background:var(--mina);} .bn.b{background:var(--byounggon);}
   .bitem .ba{font-size:12px;line-height:1.35;}
   .bitem .bl{font-size:10px;color:#9a917c;margin-top:2px;}
+  .bitem .bhw{font-size:10px;color:#5a7a3a;margin-top:3px;background:#eef3e6;border-radius:5px;padding:3px 5px;line-height:1.3;}
+  .hw-row{font-size:12px;color:#5a7a3a;margin-top:8px;background:#eef3e6;border-radius:7px;padding:6px 8px;line-height:1.4;}
+  /* 숙제 탭 */
+  .hw-pill.active{background:#5a7a3a!important;border-color:#5a7a3a!important;}
+  .hw-list{display:flex;flex-direction:column;gap:9px;}
+  .hw-card{background:var(--card);border:1px solid var(--line);border-left:4px solid;border-radius:11px;padding:11px 13px;cursor:pointer;box-shadow:var(--shadow);}
+  .hw-card.s{border-left-color:var(--sojung);}
+  .hw-card.h{border-left-color:var(--heejung);}
+  .hw-card.m{border-left-color:var(--mina);}
+  .hw-card.b{border-left-color:var(--byounggon);}
+  .hw-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+  .hw-meta{font-size:12px;color:#9a917c;}
+  .hw-text{font-size:14px;color:var(--ink);line-height:1.45;}
   .bcol-empty{font-size:11px;color:#cbc3af;text-align:center;padding:8px 0;}
   .board-hint{font-size:11px;color:#9a917c;text-align:center;margin:2px 0 8px;}
   /* 픽업 표시 (진하게 강조) */
@@ -196,6 +209,8 @@
     <input type="text" id="mAct" placeholder="예) 박윤 영어, 플라잉 요가, 골프 라운딩">
     <label>장소</label>
     <input type="text" id="mLoc" placeholder="예) ○○빌딩 3층 / 학교 정문">
+    <label>📚 숙제 (선택)</label>
+    <input type="text" id="mHw" placeholder="예) 워크북 p.30~35, 단어시험 준비">
     <label class="pk-check"><input type="checkbox" id="mPickup"> 🚗 픽업 필요한 일정</label>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="mCancel">취소</button>
@@ -347,6 +362,11 @@ function buildNav(){
     b.onclick=()=>{current=d.k;render();};
     nav.appendChild(b);
   });
+  const hw=document.createElement('button');
+  hw.className='day-pill hw-pill'+(current==='hw'?' active':'');
+  hw.innerHTML='📚 숙제';
+  hw.onclick=()=>{current='hw';render();};
+  nav.appendChild(hw);
 }
 function timelineFor(dayKey){return items.filter(it=>it.day===dayKey).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
 // 픽업 필요 여부: 내용에 '픽업' 마커가 있으면 true
@@ -365,12 +385,40 @@ function rowHtml(it){
       (pu?'<span class="car-badge">🚗 픽업</span>':'')+
       '<div class="act">'+escapeHtml(cleanAct(it.act))+'</div>'+
       '<div class="loc-row"><span class="pin">📍</span><input class="loc-input" placeholder="장소 입력" value="'+escapeAttr(it.loc||'')+'"></div>'+
+      (it.hw?'<div class="hw-row">📚 '+escapeHtml(it.hw)+'</div>':'')+
     '</div></div></div>';
 }
 function render(){
   buildNav();
   const main=document.getElementById('main');main.innerHTML='';
   let html='';
+  if(current==='hw'){
+    html+='<div class="day-title">📚 이번 주 숙제<span class="en">HOMEWORK</span></div>';
+    const hwItems=items.filter(it=>it.hw&&it.hw.trim())
+      .slice().sort((a,b)=>{
+        const da=DAYS.findIndex(d=>d.k===a.day),db=DAYS.findIndex(d=>d.k===b.day);
+        if(da!==db)return da-db;
+        return (a.start||'').localeCompare(b.start||'');
+      });
+    if(hwItems.length===0){
+      html+='<div class="empty">— 등록된 숙제가 없습니다 —<br>일정을 눌러 숙제를 추가하세요</div>';
+      main.innerHTML=html;return;
+    }
+    html+='<div class="hw-list">';
+    hwItems.forEach(it=>{
+      const p=PEOPLE[it.person]||{name:it.person,cls:'s'};
+      const d=DAYS.find(x=>x.k===it.day)||{ko:''};
+      html+='<div class="hw-card '+p.cls+'" data-id="'+it.id+'">'+
+        '<div class="hw-top"><span class="who who-'+p.cls+'">'+p.name+'</span>'+
+          '<span class="hw-meta">'+escapeHtml(d.ko)+' · '+escapeHtml(cleanAct(it.act))+'</span></div>'+
+        '<div class="hw-text">📚 '+escapeHtml(it.hw)+'</div>'+
+      '</div>';
+    });
+    html+='</div>';
+    main.innerHTML=html;
+    main.querySelectorAll('.hw-card').forEach(el=>{el.onclick=()=>openEdit(el.dataset.id);});
+    return;
+  }
   if(current==='all'){
     const today=todayKey();
     html+='<div class="board-hint">← 좌우로 밀어서 모든 요일 보기 →</div>';
@@ -389,6 +437,7 @@ function render(){
             '<span class="bn '+p.cls+'">'+p.name+'</span>'+
             '<div class="ba">'+escapeHtml(cleanAct(it.act))+'</div>'+
             (it.loc?'<div class="bl">📍 '+escapeHtml(it.loc)+'</div>':'')+
+            (it.hw?'<div class="bhw">📚 '+escapeHtml(it.hw)+'</div>':'')+
           '</div>';
         });
       }
@@ -449,6 +498,7 @@ function openEdit(id){
   document.getElementById('mEnd').value=it.end||'';
   document.getElementById('mAct').value=cleanAct(it.act);
   document.getElementById('mLoc').value=it.loc||'';
+  document.getElementById('mHw').value=it.hw||'';
   document.getElementById('mPickup').checked=!isNew&&isPickup(it);
   document.getElementById('mDelete').style.display=isNew?'none':'block';
   document.getElementById('modalBg').classList.add('show');
@@ -472,6 +522,7 @@ document.getElementById('mSave').onclick=async()=>{
   const end=document.getElementById('mEnd').value;
   let act=document.getElementById('mAct').value.trim();
   const loc=document.getElementById('mLoc').value.trim();
+  const hw=document.getElementById('mHw').value.trim();
   const wantPickup=document.getElementById('mPickup').checked;
   // 픽업 체크 상태를 내용에 반영 ('픽업🚗' 마커)
   act=act.replace(/\s*\(?픽업🚗?\)?/g,'').trim(); // 기존 마커 제거
@@ -480,10 +531,10 @@ document.getElementById('mSave').onclick=async()=>{
   setSync('busy');
   if(editCtx){
     const it=items.find(x=>x.id===editCtx);
-    Object.assign(it,{person:pickPerson,start,end,act,loc,day});
+    Object.assign(it,{person:pickPerson,start,end,act,loc,day,hw});
     await apiPost('update',it);
   }else{
-    const body={day,person:pickPerson,start,end,act,loc};
+    const body={day,person:pickPerson,start,end,act,loc,hw};
     const j=await apiPost('add',body);
     if(j.ok)items.push(Object.assign(body,{id:j.id}));
   }
