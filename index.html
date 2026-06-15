@@ -91,10 +91,9 @@
   .bcol-empty{font-size:11px;color:#cbc3af;text-align:center;padding:8px 0;}
   .board-hint{font-size:11px;color:#9a917c;text-align:center;margin:2px 0 8px;}
   /* 픽업 표시 */
-  .pk-badge{display:block;margin-top:4px;font-size:10px;font-weight:700;color:#fff;background:#c2683b;border-radius:999px;padding:2px 0;}
-  .bcol.pickup{background:#faf0e8;border-color:#e3b394;}
   .bitem.pu{background:#fdf2ea;}
   .pu-tag{font-size:11px;}
+  .car-badge{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;color:#fff;background:var(--sojung);border-radius:999px;padding:2px 8px;vertical-align:middle;}
   .pk-check{display:flex;align-items:center;gap:8px;margin-top:14px!important;font-size:14px;color:var(--ink)!important;cursor:pointer;}
   .pk-check input{width:auto!important;}
   .add-fab{position:fixed;right:18px;bottom:84px;z-index:35;background:var(--forest);color:#f3efe4;border:none;width:54px;height:54px;border-radius:50%;font-size:26px;box-shadow:0 8px 20px -8px rgba(31,58,46,.6);cursor:pointer;}
@@ -342,18 +341,21 @@ function buildNav(){
   });
 }
 function timelineFor(dayKey){return items.filter(it=>it.day===dayKey).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
-// 픽업 필요 여부: 내용에 '픽업'이 들어있거나 loc에 [픽업] 표시가 있으면 true
-function isPickup(it){return /픽업/.test((it.act||'')+' '+(it.loc||''));}
-function dayHasPickup(dayKey){return timelineFor(dayKey).some(isPickup);}
+// 픽업 필요 여부: 내용에 '픽업' 마커가 있으면 true
+function isPickup(it){return /픽업/.test((it.act||''));}
+// 표시용: 픽업 마커 텍스트를 제거 (아이콘으로 대체하므로)
+function cleanAct(a){return (a||'').replace(/\s*\(?픽업🚗?\)?/g,'').trim();}
 function rowHtml(it){
   const p=PEOPLE[it.person]||{name:it.person,cls:'s'};
+  const pu=isPickup(it);
   return '<div class="tl-row">'+
     '<div class="tl-time">'+escapeHtml(it.start||'')+(it.end?'<span class="end">~'+escapeHtml(it.end)+'</span>':'')+'</div>'+
     '<div class="tl-line"><span class="tl-dot dot-'+p.cls+'"></span></div>'+
     '<div class="tl-body"><div class="card '+p.cls+'" data-id="'+it.id+'">'+
       '<button class="del-btn">×</button>'+
       '<span class="who who-'+p.cls+'">'+p.name+'</span>'+
-      '<div class="act">'+escapeHtml(it.act||'')+'</div>'+
+      (pu?'<span class="car-badge">🚗 픽업</span>':'')+
+      '<div class="act">'+escapeHtml(cleanAct(it.act))+'</div>'+
       '<div class="loc-row"><span class="pin">📍</span><input class="loc-input" placeholder="장소 입력" value="'+escapeAttr(it.loc||'')+'"></div>'+
     '</div></div></div>';
 }
@@ -367,10 +369,8 @@ function render(){
     html+='<div class="board">';
     DAYS.forEach(d=>{
       const tl=timelineFor(d.k);
-      const pk=dayHasPickup(d.k);
-      html+='<div class="bcol'+(d.k===today?' today':'')+(pk?' pickup':'')+'">';
-      html+='<div class="bcol-h">'+d.pill+'<span class="en">'+d.en+'</span>'+
-        (pk?'<span class="pk-badge">🚗 픽업</span>':'')+'</div>';
+      html+='<div class="bcol'+(d.k===today?' today':'')+'">';
+      html+='<div class="bcol-h">'+d.pill+'<span class="en">'+d.en+'</span></div>';
       if(tl.length===0){html+='<div class="bcol-empty">—</div>';}
       else{
         tl.forEach(it=>{
@@ -379,7 +379,7 @@ function render(){
           html+='<div class="bitem '+p.cls+(pu?' pu':'')+'" data-id="'+it.id+'">'+
             '<div class="bt">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+(pu?' <span class="pu-tag">🚗</span>':'')+'</div>'+
             '<span class="bn '+p.cls+'">'+p.name+'</span>'+
-            '<div class="ba">'+escapeHtml(it.act||'')+'</div>'+
+            '<div class="ba">'+escapeHtml(cleanAct(it.act))+'</div>'+
             (it.loc?'<div class="bl">📍 '+escapeHtml(it.loc)+'</div>':'')+
           '</div>';
         });
