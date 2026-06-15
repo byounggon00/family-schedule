@@ -503,15 +503,17 @@ function escapeAttr(s){return(s+'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 function todayKey(){const map=['sun','mon','tue','wed','thu','fri','sat'];return map[new Date().getDay()];}
 // 이번 주(월~일)에서 요일키에 해당하는 날짜를 "M/D"로 반환
 function dateForDay(dayKey){
-  const order=['mon','tue','wed','thu','fri','sat','sun'];
-  const idx=order.indexOf(dayKey);
-  if(idx<0)return '';
-  const now=new Date();
-  const dow=now.getDay(); // 0=일 ... 6=토
-  const offsetToMon=(dow===0?-6:1-dow); // 이번 주 월요일까지의 차이
-  const mon=new Date(now);mon.setDate(now.getDate()+offsetToMon);
-  const d=new Date(mon);d.setDate(mon.getDate()+idx);
-  return (d.getMonth()+1)+'/'+d.getDate();
+  try{
+    const order=['mon','tue','wed','thu','fri','sat','sun'];
+    const idx=order.indexOf(dayKey);
+    if(idx<0)return '';
+    const now=new Date();
+    const dow=now.getDay();
+    const offsetToMon=(dow===0?-6:1-dow);
+    const mon=new Date(now);mon.setDate(now.getDate()+offsetToMon);
+    const d=new Date(mon);d.setDate(mon.getDate()+idx);
+    return (d.getMonth()+1)+'/'+d.getDate();
+  }catch(e){return '';}
 }
 // 기본은 전체 보드. (요일 탭을 누르면 하루 보기로 전환)
 boot();
