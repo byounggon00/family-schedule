@@ -139,6 +139,11 @@
   .row2>div{flex:1;}
   .modal-actions{display:flex;gap:10px;margin-top:18px;}
   .modal-actions .btn{flex:1;}
+  .day-chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .day-chips button{flex:0 0 auto;width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:9px;font-family:'Gowun Dodum';font-size:14px;cursor:pointer;color:var(--ink);}
+  .day-chips button.on{background:var(--forest);color:#fff;border-color:var(--forest);}
+  .btn-copy{width:100%;margin-top:10px;background:transparent;color:var(--forest);border:1px solid var(--forest);}
+  .btn-copy:active{background:#eef2ee;}
   .btn-delete{width:100%;margin-top:10px;background:transparent;color:#c2683b;border:1px solid #e3b394;}
   .btn-delete:active{background:#faf0e8;}
   .setup{padding:40px 24px;max-width:520px;margin:0 auto;text-align:center;}
@@ -192,8 +197,8 @@
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <h3 id="modalTitle">일정 추가</h3>
-    <label>요일</label>
-    <select id="mDay"></select>
+    <label id="dayLabel">요일</label>
+    <div class="day-chips" id="mDayChips"></div>
     <label>누구</label>
     <div class="seg" id="segPerson">
       <button data-p="sojung" class="p-s">소정</button>
@@ -216,6 +221,7 @@
       <button class="btn btn-ghost" id="mCancel">취소</button>
       <button class="btn btn-primary" id="mSave">저장</button>
     </div>
+    <button class="btn btn-copy" id="mCopy">📋 다른 요일로 복사</button>
     <button class="btn btn-delete" id="mDelete">이 일정 삭제</button>
   </div>
 </div>
@@ -481,18 +487,40 @@ function bindCards(main){
 function setPerson(pk){pickPerson=pk;document.querySelectorAll('#segPerson button').forEach(b=>b.classList.toggle('on',b.dataset.p===pk));}
 document.querySelectorAll('#segPerson button').forEach(b=>b.onclick=()=>setPerson(b.dataset.p));
 
+let selectedDays=[]; // 모달에서 선택된 요일들
+
+function buildDayChips(activeKeys, multi){
+  const wrap=document.getElementById('mDayChips');
+  wrap.innerHTML='';
+  selectedDays=activeKeys.slice();
+  DAYS.forEach(d=>{
+    const b=document.createElement('button');
+    b.textContent=d.pill;
+    if(selectedDays.includes(d.k))b.classList.add('on');
+    b.onclick=()=>{
+      if(multi){
+        if(selectedDays.includes(d.k))selectedDays=selectedDays.filter(k=>k!==d.k);
+        else selectedDays.push(d.k);
+      }else{
+        selectedDays=[d.k];
+        wrap.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      }
+      b.classList.toggle('on',selectedDays.includes(d.k));
+    };
+    wrap.appendChild(b);
+  });
+}
+
 function openEdit(id){
   editCtx=id||null;
   const isNew=!id;
   document.getElementById('modalTitle').textContent=isNew?'일정 추가':'일정 수정';
-  let it={person:'sojung',start:'',end:'',act:'',loc:'',day:''};
+  let it={person:'sojung',start:'',end:'',act:'',loc:'',day:'',hw:''};
   if(!isNew)it=items.find(x=>x.id===id)||it;
-  // 요일 드롭다운 채우기
-  const sel=document.getElementById('mDay');
-  sel.innerHTML=DAYS.map(d=>'<option value="'+d.k+'">'+d.ko+'</option>').join('');
-  // 기본 요일: 수정이면 그 일정 요일, 추가면 현재 보는 요일(전체면 오늘)
-  let defDay=it.day||(current==='all'?todayKey():current);
-  sel.value=defDay;
+  // 요일 칩: 추가는 다중선택, 수정은 단일
+  let defDay=it.day||(current==='all'||current==='hw'?todayKey():current);
+  buildDayChips([defDay], isNew);
+  document.getElementById('dayLabel').textContent=isNew?'요일 (여러 개 선택 가능)':'요일';
   setPerson(it.person||'sojung');
   document.getElementById('mStart').value=it.start||'';
   document.getElementById('mEnd').value=it.end||'';
@@ -501,6 +529,7 @@ function openEdit(id){
   document.getElementById('mHw').value=it.hw||'';
   document.getElementById('mPickup').checked=!isNew&&isPickup(it);
   document.getElementById('mDelete').style.display=isNew?'none':'block';
+  document.getElementById('mCopy').style.display=isNew?'none':'block';
   document.getElementById('modalBg').classList.add('show');
 }
 function closeModal(){document.getElementById('modalBg').classList.remove('show');editCtx=null;}
@@ -517,28 +546,51 @@ document.getElementById('mDelete').onclick=async()=>{
 };
 document.getElementById('modalBg').onclick=e=>{if(e.target.id==='modalBg')closeModal();};
 document.getElementById('mSave').onclick=async()=>{
-  const day=document.getElementById('mDay').value;
+  const days=selectedDays.slice();
   const start=document.getElementById('mStart').value;
   const end=document.getElementById('mEnd').value;
   let act=document.getElementById('mAct').value.trim();
   const loc=document.getElementById('mLoc').value.trim();
   const hw=document.getElementById('mHw').value.trim();
   const wantPickup=document.getElementById('mPickup').checked;
-  // 픽업 체크 상태를 내용에 반영 ('픽업🚗' 마커)
-  act=act.replace(/\s*\(?픽업🚗?\)?/g,'').trim(); // 기존 마커 제거
+  act=act.replace(/\s*\(?픽업🚗?\)?/g,'').trim();
   if(wantPickup)act=act+(act?' ':'')+'(픽업🚗)';
   if(!start&&!act){closeModal();return;}
+  if(days.length===0){toast('요일을 선택하세요');return;}
   setSync('busy');
   if(editCtx){
+    // 수정: 단일 요일 (칩이 단일선택)
     const it=items.find(x=>x.id===editCtx);
-    Object.assign(it,{person:pickPerson,start,end,act,loc,day,hw});
+    Object.assign(it,{person:pickPerson,start,end,act,loc,day:days[0],hw});
     await apiPost('update',it);
   }else{
-    const body={day,person:pickPerson,start,end,act,loc,hw};
-    const j=await apiPost('add',body);
-    if(j.ok)items.push(Object.assign(body,{id:j.id}));
+    // 추가: 선택된 모든 요일에 생성
+    for(const day of days){
+      const body={day,person:pickPerson,start,end,act,loc,hw};
+      const j=await apiPost('add',body);
+      if(j.ok)items.push(Object.assign({...body},{id:j.id}));
+    }
   }
-  setSync('ok');closeModal();render();toast('저장됨');
+  setSync('ok');closeModal();render();toast(days.length>1?days.length+'개 요일에 저장됨':'저장됨');
+};
+
+// 복사: 현재 수정 중인 일정을 다른 요일들로 복제
+document.getElementById('mCopy').onclick=async()=>{
+  if(!editCtx)return;
+  const src=items.find(x=>x.id===editCtx);if(!src)return;
+  const others=DAYS.filter(d=>d.k!==src.day);
+  const labels=others.map((d,i)=>(i+1)+') '+d.ko).join('\n');
+  const ans=prompt('어느 요일로 복사할까요? 번호를 쉼표로 입력 (예: 1,3,5)\n\n'+labels);
+  if(!ans)return;
+  const picks=ans.split(',').map(s=>parseInt(s.trim())-1).filter(i=>i>=0&&i<others.length);
+  if(picks.length===0){toast('잘못된 입력');return;}
+  setSync('busy');
+  for(const i of picks){
+    const body={day:others[i].k,person:src.person,start:src.start,end:src.end,act:src.act,loc:src.loc,hw:src.hw};
+    const j=await apiPost('add',body);
+    if(j.ok)items.push(Object.assign({...body},{id:j.id}));
+  }
+  setSync('ok');closeModal();render();toast(picks.length+'개 요일로 복사됨');
 };
 
 document.getElementById('reloadBtn').onclick=()=>refresh(false);
