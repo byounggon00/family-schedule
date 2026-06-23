@@ -82,6 +82,10 @@
   .fg-time em{font-style:normal;color:#9a8f78;font-weight:400;margin-left:4px;}
   .fg-between{font-size:11px;color:#8a8170;}
   .free-none{font-size:12px;color:#bdb6a3;display:block;}
+  .now-status{display:block;font-size:12px;color:var(--forest);font-weight:700;margin-bottom:6px;}
+  .banner-clock{float:right;font-size:11px;font-weight:400;color:#9a917c;}
+  .free-gap.gap-now{background:#dfe9df;border:1px solid #7ea98a;}
+  .fg-time b{color:#2f7d4f;margin-left:4px;}
   /* 주간 보드 (가로 7칸) */
   .board{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;scrollbar-width:thin;-webkit-overflow-scrolling:touch;}
   .board::-webkit-scrollbar{height:6px;}
@@ -398,7 +402,7 @@ function gapsFor(dayKey,personKey){
   const gaps=[];
   for(let i=0;i<list.length-1;i++){
     const endPrev=list[i].e, startNext=list[i+1].s;
-    if(startNext-endPrev>=10){ // 10분 이상 비면 표시
+    if(startNext-endPrev>10){ // 10분 초과(11분 이상)만 표시
       gaps.push({person:personKey,start:endPrev,end:startNext,from:list[i].name,to:list[i+1].name});
     }
   }
@@ -407,22 +411,51 @@ function gapsFor(dayKey,personKey){
 // 소정·희정 빈 시간을 어떤 학원 사이인지와 함께
 function freeBanner(dayKey){
   const targets=[['sojung','소정','s'],['heejung','희정','h']];
+  const isToday=(dayKey===todayKey());
+  const now=new Date();
+  const nowMin=now.getHours()*60+now.getMinutes();
   let rows='';
   targets.forEach(([pk,name,cls])=>{
     const gaps=gapsFor(dayKey,pk);
     rows+='<div class="free-block"><span class="free-who who-'+cls+'">'+name+'</span>';
+    if(isToday){rows+='<span class="now-status">'+nowStatus(dayKey,pk,nowMin)+'</span>';}
     if(gaps.length===0){rows+='<span class="free-none">학원 사이 빈 시간 없음</span>';}
     else{
-      rows+='<div class="free-gaps">'+gaps.map(g=>
-        '<div class="free-gap">'+
-          '<span class="fg-time">'+minToHM(g.start)+'~'+minToHM(g.end)+' <em>'+gapLen(g.end-g.start)+'</em></span>'+
+      rows+='<div class="free-gaps">'+gaps.map(g=>{
+        const isNow=isToday&&nowMin>=g.start&&nowMin<g.end;
+        return '<div class="free-gap'+(isNow?' gap-now':'')+'">'+
+          '<span class="fg-time">'+minToHM(g.start)+'~'+minToHM(g.end)+' <em>'+gapLen(g.end-g.start)+'</em>'+(isNow?' <b>지금</b>':'')+'</span>'+
           '<span class="fg-between">'+escapeHtml(g.from||'일정')+' → '+escapeHtml(g.to||'일정')+'</span>'+
-        '</div>'
-      ).join('')+'</div>';
+        '</div>';
+      }).join('')+'</div>';
     }
     rows+='</div>';
   });
-  return '<div class="free-banner"><div class="free-title">⏳ 학원 사이 빈 시간</div>'+rows+'</div>';
+  const timeNow=isToday?'<span class="banner-clock">현재 '+minToHM(nowMin)+'</span>':'';
+  return '<div class="free-banner"><div class="free-title">⏳ 학원 사이 빈 시간'+timeNow+'</div>'+rows+'</div>';
+}
+// 현재 시각 기준 그 사람의 상태 한 줄
+function nowStatus(dayKey,pk,nowMin){
+  const list=items.filter(it=>it.day===dayKey&&it.person===pk)
+    .map(it=>({s:toMin(it.start),e:toMin(it.end)||toMin(it.start),name:cleanAct(it.act)}))
+    .filter(x=>x.s!=null).sort((a,b)=>a.s-b.s);
+  if(list.length===0)return '오늘 일정 없음';
+  // 진행 중인 일정?
+  for(const it of list){
+    if(nowMin>=it.s&&nowMin<it.e&&it.e>it.s){
+      return '🔵 지금 '+it.name+' 중 (~'+minToHM(it.e)+')';
+    }
+  }
+  // 다음 일정?
+  const next=list.find(it=>it.s>nowMin);
+  if(next){
+    const left=next.s-nowMin;
+    return '⏰ 다음: '+next.name+' '+minToHM(next.s)+' ('+gapLen(left)+' 후)';
+  }
+  // 마지막 일정도 지남
+  const last=list[list.length-1];
+  if(nowMin<last.s)return '곧 시작';
+  return '✅ 오늘 일정 종료';
 }
 function gapLen(min){const h=Math.floor(min/60),m=min%60;return (h?h+'시간':'')+(m?m+'분':'')||'0분';}
 // 픽업 필요 여부: 내용에 '픽업' 마커가 있으면 true
