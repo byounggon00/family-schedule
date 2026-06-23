@@ -122,6 +122,29 @@
   .hw-text{font-size:14px;color:var(--ink);line-height:1.45;}
   .bcol-empty{font-size:11px;color:#cbc3af;text-align:center;padding:8px 0;}
   .board-hint{font-size:11px;color:#9a917c;text-align:center;margin:2px 0 8px;}
+  /* 시간축 격자 */
+  .grid-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--card);}
+  .grid{display:flex;min-width:max-content;position:relative;}
+  .grid-times{flex:0 0 42px;position:sticky;left:0;z-index:3;background:var(--card);border-right:1px solid var(--line);}
+  .gt-head{height:34px;border-bottom:1px solid var(--line);}
+  .gt-hour{font-size:10px;color:#9a917c;text-align:right;padding:2px 5px 0 0;box-sizing:border-box;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;}
+  .gcol{flex:0 0 116px;border-right:1px solid var(--line);position:relative;}
+  .gcol:last-child{border-right:none;}
+  .gcol.today{background:#f3f6f1;}
+  .gcol-h{height:34px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:13px;font-weight:700;border-bottom:1px solid var(--line);position:sticky;top:0;background:inherit;z-index:2;}
+  .gcol.today .gcol-h{color:var(--forest);}
+  .gcol-h .gd{font-size:10px;color:#9a917c;font-weight:400;}
+  .gcol-body{position:relative;}
+  .gline{position:absolute;left:0;right:0;border-top:1px solid #ede8db;}
+  .gitem{position:absolute;border-radius:7px;padding:3px 5px;overflow:hidden;cursor:pointer;color:#fff;box-sizing:border-box;font-size:11px;line-height:1.2;box-shadow:0 1px 3px -1px rgba(0,0,0,.25);}
+  .gitem.s{background:var(--sojung);}
+  .gitem.h{background:var(--heejung);}
+  .gitem.m{background:var(--mina);}
+  .gitem.b{background:var(--byounggon);}
+  .gitem.pu{outline:2px solid #fff;outline-offset:-3px;}
+  .gi-name{font-size:9px;opacity:.85;font-weight:700;}
+  .gi-act{font-size:11px;font-weight:700;white-space:normal;}
+  .gi-time{font-size:9px;opacity:.8;font-variant-numeric:tabular-nums;}
   /* 픽업 표시 (진하게 강조) */
   .bitem.pu{background:#f6d9c4;border-left-width:5px;}
   .bitem.pu .bt{color:#a84a1f;}
@@ -394,6 +417,27 @@ function timelineFor(dayKey){return items.filter(it=>it.day===dayKey).slice().so
 // "14:20" → 분 단위 숫자. 실패 시 null
 function toMin(t){if(!t)return null;const m=(''+t).match(/(\d{1,2}):(\d{2})/);if(!m)return null;return parseInt(m[1])*60+parseInt(m[2]);}
 function minToHM(v){const h=Math.floor(v/60),m=v%60;return ('0'+h).slice(-2)+':'+('0'+m).slice(-2);}
+// 겹치는 일정들을 나란히 배치: 각 일정의 열 인덱스와 그 시점 동시 일정 수 계산
+function assignColumns(arr){
+  const colIndex=new Array(arr.length).fill(0);
+  const colCount=new Array(arr.length).fill(1);
+  for(let i=0;i<arr.length;i++){
+    // i와 시간이 겹치는 일정들 모으기
+    const overlap=[];
+    for(let j=0;j<arr.length;j++){
+      if(arr[j].s<arr[i].e&&arr[j].e>arr[i].s)overlap.push(j);
+    }
+    // 겹치는 그룹 내에서 i의 순번
+    const used=new Set();
+    overlap.forEach(j=>{if(j<i)used.add(colIndex[j]);});
+    let c=0;while(used.has(c))c++;
+    colIndex[i]=c;
+    const cnt=overlap.length;
+    overlap.forEach(j=>{colCount[j]=Math.max(colCount[j],cnt);});
+    colCount[i]=Math.max(colCount[i],cnt);
+  }
+  return {colIndex,colCount};
+}
 // 한 사람의 하루 일정에서 일정-사이 빈틈 구하기 (첫~마지막 사이만)
 function gapsFor(dayKey,personKey){
   const list=items.filter(it=>it.day===dayKey&&it.person===personKey)
@@ -510,31 +554,58 @@ function render(){
   }
   if(current==='all'){
     const today=todayKey();
-    html+='<div class="board-hint">← 좌우로 밀어서 모든 요일 보기 →</div>';
-    html+='<div class="board">';
-    DAYS.forEach(d=>{
-      const tl=timelineFor(d.k);
-      html+='<div class="bcol'+(d.k===today?' today':'')+'">';
-      html+='<div class="bcol-h">'+d.pill+' <span class="bdate">'+dateForDay(d.k)+'</span><span class="en">'+d.en+'</span></div>';
-      if(tl.length===0){html+='<div class="bcol-empty">—</div>';}
-      else{
-        tl.forEach(it=>{
-          const p=PEOPLE[it.person]||{name:it.person,cls:'s'};
-          const pu=isPickup(it);
-          html+='<div class="bitem '+p.cls+(pu?' pu':'')+'" data-id="'+it.id+'">'+
-            '<div class="bt">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+(pu?' <span class="pu-tag">🚗</span>':'')+'</div>'+
-            '<span class="bn '+p.cls+'">'+p.name+'</span>'+
-            '<div class="ba">'+escapeHtml(cleanAct(it.act))+'</div>'+
-            (it.loc?'<div class="bl">📍 '+escapeHtml(it.loc)+'</div>':'')+
-            (it.hw?'<div class="bhw">📚 '+escapeHtml(it.hw)+'</div>':'')+
-          '</div>';
-        });
-      }
-      html+='</div>';
+    // 시간 범위 계산 (사용된 일정의 최소 시작 ~ 최대 끝, 시 단위로 반올림)
+    let minM=24*60, maxM=0;
+    items.forEach(it=>{
+      const s=toMin(it.start), e=toMin(it.end)||(toMin(it.start)!=null?toMin(it.start)+30:null);
+      if(s!=null){minM=Math.min(minM,s);maxM=Math.max(maxM,e||s+30);}
     });
+    if(minM>=maxM){minM=13*60;maxM=19*60;} // 기본값
+    const startH=Math.floor(minM/60), endH=Math.ceil(maxM/60);
+    const PXMIN=1.1; // 1분당 픽셀
+    const gridH=(endH-startH)*60*PXMIN;
+    html+='<div class="board-hint">← 좌우로 밀어서 모든 요일 보기 →</div>';
+    html+='<div class="grid-wrap"><div class="grid" style="height:'+(gridH+34)+'px">';
+    // 시간축 (왼쪽 고정 칼럼)
+    html+='<div class="grid-times"><div class="gt-head"></div>';
+    for(let hh=startH;hh<endH;hh++){
+      html+='<div class="gt-hour" style="height:'+(60*PXMIN)+'px">'+('0'+hh).slice(-2)+':00</div>';
+    }
     html+='</div>';
+    // 요일 칼럼들
+    DAYS.forEach(d=>{
+      html+='<div class="gcol'+(d.k===today?' today':'')+'">';
+      html+='<div class="gcol-h">'+d.pill+'<span class="gd">'+dateForDay(d.k)+'</span></div>';
+      html+='<div class="gcol-body" style="height:'+gridH+'px">';
+      // 시간 눈금선
+      for(let hh=startH;hh<endH;hh++){
+        html+='<div class="gline" style="top:'+((hh-startH)*60*PXMIN)+'px"></div>';
+      }
+      // 일정 블록 (겹치면 나란히)
+      const dayItems=items.filter(it=>it.day===d.k&&toMin(it.start)!=null)
+        .map(it=>{const s=toMin(it.start);let e=toMin(it.end);if(e==null||e<=s)e=s+30;return {it,s,e};})
+        .sort((a,b)=>a.s-b.s);
+      // 겹침 그룹 계산
+      const cols=assignColumns(dayItems);
+      dayItems.forEach((g,i)=>{
+        const it=g.it, p=PEOPLE[it.person]||{name:it.person,cls:'s'};
+        const pu=isPickup(it);
+        const top=(g.s-startH*60)*PXMIN;
+        const hgt=Math.max((g.e-g.s)*PXMIN,22);
+        const colN=cols.colCount[i], colI=cols.colIndex[i];
+        const wPct=100/colN, leftPct=wPct*colI;
+        html+='<div class="gitem '+p.cls+(pu?' pu':'')+'" data-id="'+it.id+'" '+
+          'style="top:'+top+'px;height:'+hgt+'px;left:calc('+leftPct+'% + 2px);width:calc('+wPct+'% - 4px)">'+
+          '<div class="gi-name">'+p.name+'</div>'+
+          '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' 🚗':'')+'</div>'+
+          (hgt>44?'<div class="gi-time">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</div>':'')+
+        '</div>';
+      });
+      html+='</div></div>';
+    });
+    html+='</div></div>';
     main.innerHTML=html;
-    main.querySelectorAll('.bitem').forEach(el=>{el.onclick=()=>openEdit(el.dataset.id);});
+    main.querySelectorAll('.gitem').forEach(el=>{el.onclick=()=>openEdit(el.dataset.id);});
     return;
   }
   {
