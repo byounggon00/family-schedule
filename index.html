@@ -70,6 +70,15 @@
   .del-btn{position:absolute;top:7px;right:7px;border:none;background:transparent;color:#cbc3af;font-size:18px;line-height:1;cursor:pointer;padding:4px;}
   .del-btn:active{color:var(--sojung);}
   .empty{color:#bdb6a3;font-size:14px;padding:20px 2px;text-align:center;}
+  /* 빈 시간 배너 */
+  .free-banner{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:14px;box-shadow:var(--shadow);}
+  .free-title{font-size:13px;font-weight:700;color:var(--forest);margin-bottom:9px;}
+  .free-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:7px;}
+  .free-row:last-child{margin-bottom:0;}
+  .free-who{font-size:11px;font-weight:700;color:#fff;padding:2px 9px;border-radius:999px;flex:0 0 auto;}
+  .free-slot{font-size:12px;background:#ece7da;color:#5a5444;border-radius:7px;padding:3px 8px;font-variant-numeric:tabular-nums;}
+  .free-slot em{font-style:normal;color:#9a8f78;font-size:11px;}
+  .free-none{font-size:12px;color:#bdb6a3;}
   /* 주간 보드 (가로 7칸) */
   .board{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;scrollbar-width:thin;-webkit-overflow-scrolling:touch;}
   .board::-webkit-scrollbar{height:6px;}
@@ -375,6 +384,37 @@ function buildNav(){
   nav.appendChild(hw);
 }
 function timelineFor(dayKey){return items.filter(it=>it.day===dayKey).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));}
+// "14:20" → 분 단위 숫자. 실패 시 null
+function toMin(t){if(!t)return null;const m=(''+t).match(/(\d{1,2}):(\d{2})/);if(!m)return null;return parseInt(m[1])*60+parseInt(m[2]);}
+function minToHM(v){const h=Math.floor(v/60),m=v%60;return ('0'+h).slice(-2)+':'+('0'+m).slice(-2);}
+// 한 사람의 하루 일정에서 일정-사이 빈틈 구하기 (첫~마지막 사이만)
+function gapsFor(dayKey,personKey){
+  const list=items.filter(it=>it.day===dayKey&&it.person===personKey)
+    .map(it=>({s:toMin(it.start),e:toMin(it.end)||toMin(it.start)}))
+    .filter(x=>x.s!=null).sort((a,b)=>a.s-b.s);
+  const gaps=[];
+  for(let i=0;i<list.length-1;i++){
+    const endPrev=list[i].e, startNext=list[i+1].s;
+    if(startNext-endPrev>=10){ // 10분 이상 비면 표시
+      gaps.push({person:personKey,start:endPrev,end:startNext});
+    }
+  }
+  return gaps;
+}
+// 소정·희정 빈 시간을 한 줄 요약으로
+function freeBanner(dayKey){
+  const targets=[['sojung','소정','s'],['heejung','희정','h']];
+  let rows='';
+  targets.forEach(([pk,name,cls])=>{
+    const gaps=gapsFor(dayKey,pk);
+    let inner;
+    if(gaps.length===0){inner='<span class="free-none">학원 사이 빈 시간 없음</span>';}
+    else{inner=gaps.map(g=>'<span class="free-slot">'+minToHM(g.start)+'~'+minToHM(g.end)+' <em>('+gapLen(g.end-g.start)+')</em></span>').join('');}
+    rows+='<div class="free-row"><span class="free-who who-'+cls+'">'+name+'</span>'+inner+'</div>';
+  });
+  return '<div class="free-banner"><div class="free-title">⏳ 학원 사이 빈 시간</div>'+rows+'</div>';
+}
+function gapLen(min){const h=Math.floor(min/60),m=min%60;return (h?h+'시간':'')+(m?m+'분':'')||'0분';}
 // 픽업 필요 여부: 내용에 '픽업' 마커가 있으면 true
 function isPickup(it){return /픽업/.test((it.act||''));}
 // 표시용: 픽업 마커 텍스트를 제거 (아이콘으로 대체하므로)
@@ -457,6 +497,8 @@ function render(){
   {
     const d=DAYS.find(x=>x.k===current);
     html='<div class="day-title">'+d.ko+' <span class="dtitle-date">'+dateForDay(current)+'</span><span class="en">'+d.en+'</span></div>';
+    // 소정·희정 빈 시간 요약
+    html+=freeBanner(current);
     const tl=timelineFor(current);
     if(tl.length===0){html+='<div class="empty">— 일정이 없습니다 —<br>＋ 버튼으로 추가하세요</div>';main.innerHTML=html;return;}
     html+='<div class="timeline">'+tl.map(rowHtml).join('')+'</div>';
