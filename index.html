@@ -604,7 +604,7 @@ function gridColumnHtml(d, startH, endH, PXMIN, showHeader){
     .sort((a,b)=>(a.start||'').localeCompare(b.start||''));
   extra.forEach(it=>{
     const p=PEOPLE[it.person], top=(toMin(it.start)-startH*60)*PXMIN;
-    html+='<div class="gitem '+p.cls+'" data-id="'+it.id+'" style="top:'+top+'px;height:24px;left:2px;width:calc(100% - 4px);opacity:.92;z-index:4">'+
+    html+='<div class="gitem '+p.cls+'" data-id="'+it.id+'" style="top:'+top+'px;height:24px;left:2px;width:calc(100% - 4px);opacity:.92;z-index:3">'+
       '<div class="gi-act" style="font-size:10px">'+p.name+' · '+escapeHtml(cleanAct(it.act))+'</div></div>';
   });
   html+='</div></div>';
