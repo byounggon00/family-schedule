@@ -11,7 +11,7 @@
 <style>
   :root{
     --ink:#1c2620;--paper:#f3efe4;--card:#fbf8f0;--line:#d8d0bd;--forest:#1f3a2e;
-    --sojung:#c2683b;--heejung:#3f7d8c;--mina:#8a5a8f;--byounggon:#4a6b4f;
+    --sojung:#f0883e;--heejung:#3aa6c9;--mina:#b765c4;--byounggon:#5cab6b;
     --shadow:0 1px 0 rgba(0,0,0,.04), 0 8px 24px -16px rgba(31,58,46,.35);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -148,6 +148,7 @@
   .gitem.b{background:var(--byounggon);}
   .gitem.pu{outline:2px solid #fff;outline-offset:-3px;}
   .gi-act{font-size:11px;font-weight:700;word-break:keep-all;line-height:1.2;}
+  .gi-t{font-size:9px;font-weight:700;opacity:.85;white-space:nowrap;}
   .gfree{position:absolute;border-radius:6px;background:repeating-linear-gradient(45deg,#eee9dd,#eee9dd 5px,#e6e0d2 5px,#e6e0d2 10px);box-sizing:border-box;display:flex;align-items:center;justify-content:center;z-index:1;}
   .gfree span{font-size:9px;color:#9a8f78;font-weight:700;}
   /* 픽업 표시 (진하게 강조) */
@@ -599,9 +600,12 @@ function render(){
           const it=g.it,p=PEOPLE[it.person]||{cls:cls,name:nm};
           const pu=isPickup(it);
           const top=(g.s-startH*60)*PXMIN, hgt=Math.max((g.e-g.s)*PXMIN,28);
+          // 정시(00분)나 30분에 시작하지 않으면 시간 라벨 추가
+          const offGrid=(g.s%30!==0);
+          const timeLabel=offGrid?' <span class="gi-t">'+escapeHtml(it.start||'')+'</span>':'';
           html+='<div class="gitem '+cls+(pu?' pu':'')+'" data-id="'+it.id+'" '+
             'style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
-            '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' 🚗':'')+'</div>'+
+            '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' 🚗':'')+timeLabel+'</div>'+
           '</div>';
         });
         // 빈 시간 블록 (일정 사이, 11분 이상)
