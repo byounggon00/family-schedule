@@ -127,12 +127,19 @@
   .grid{display:flex;min-width:max-content;position:relative;}
   .grid-times{flex:0 0 30px;position:sticky;left:0;z-index:3;background:var(--card);border-right:1px solid var(--line);}
   .gt-head2{height:58px;border-bottom:1px solid var(--line);}
+  .gt-head3{height:24px;border-bottom:1px solid var(--line);}
+  .day-grid .grid{min-width:0;width:100%;}
+  .day-grid .gcol{flex:1;}
   .gt-hour{font-size:11px;color:#9a917c;text-align:center;padding-top:2px;box-sizing:border-box;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;font-weight:700;}
   .gcol{flex:0 0 150px;border-right:1px solid var(--line);position:relative;}
   .gcol:last-child{border-right:none;}
-  .gcol.today{background:#fcecea;}
+  .gcol.today{background:transparent;}
   .gcol-h{height:34px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:14px;font-weight:700;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:2;}
-  .gcol.today .gcol-h{color:#e0463e;background:#fcecea;}
+  .gcol.today .gcol-h{background:var(--card);}
+  .gcol-h.sat{color:#2f6fd0;}
+  .gcol-h.sun{color:#e0463e;}
+  .day-title.sat{color:#2f6fd0;}
+  .day-title.sun{color:#e0463e;}
   .gcol-h .gd{font-size:11px;color:#9a917c;font-weight:400;}
   .lane-head{height:24px;display:flex;border-bottom:1px solid var(--line);}
   .lane-head .lh{flex:1;text-align:center;font-size:10px;font-weight:700;line-height:24px;color:#fff;}
@@ -487,7 +494,7 @@ function freeBanner(dayKey){
     rows+='</div>';
   });
   const timeNow=isToday?'<span class="banner-clock">현재 '+minToHM(nowMin)+'</span>':'';
-  return '<div class="free-banner"><div class="free-title">⏳ 학원 사이 빈 시간'+timeNow+'</div>'+rows+'</div>';
+  return '<div class="free-banner"><div class="free-title">⏳ 학원 사이 빈 시간 (휴식)'+timeNow+'</div>'+rows+'</div>';
 }
 // 현재 시각 기준 그 사람의 상태 한 줄
 function nowStatus(dayKey,pk,nowMin){
@@ -532,6 +539,76 @@ function rowHtml(it){
       (it.hw?'<div class="hw-row">📚 '+escapeHtml(it.hw)+'</div>':'')+
     '</div></div></div>';
 }
+// 단일 요일 격자 칼럼 HTML 생성 (전체보기·하루보기 공용)
+function gridColumnHtml(d, startH, endH, PXMIN, showHeader){
+  const today=todayKey();
+  const gridH=(endH-startH)*60*PXMIN;
+  const LANES=[['sojung','소정','s'],['heejung','희정','h']];
+  let html='<div class="gcol'+(d.k===today?' today':'')+'">';
+  if(showHeader){
+    html+='<div class="gcol-h'+(d.k==='sat'?' sat':d.k==='sun'?' sun':'')+'">'+d.pill+'<span class="gd">'+dateForDay(d.k)+'</span></div>';
+  }
+  html+='<div class="lane-head"><span class="lh s">소정</span><span class="lh h">희정</span></div>';
+  html+='<div class="gcol-body" style="height:'+gridH+'px">';
+  for(let hh=startH;hh<endH;hh++){
+    html+='<div class="gline" style="top:'+((hh-startH)*60*PXMIN)+'px"></div>';
+  }
+  if(d.k===today){
+    const nowMin=new Date().getHours()*60+new Date().getMinutes();
+    if(nowMin>=startH*60&&nowMin<=endH*60){
+      html+='<div class="now-line" style="top:'+((nowMin-startH*60)*PXMIN)+'px"><span class="now-dot"></span></div>';
+    }
+  }
+  html+='<div class="lane-div"></div>';
+  const PT_H=13;
+  LANES.forEach(([pk,nm,cls],laneI)=>{
+    const leftPct=laneI*50;
+    const list=items.filter(it=>it.day===d.k&&it.person===pk&&toMin(it.start)!=null)
+      .map(it=>{const s=toMin(it.start);let e=toMin(it.end);const re=(e==null||e<=s)?s:e;if(e==null||e<=s)e=s+25;return {it,s,e,re,hasEnd:!!it.end};})
+      .sort((a,b)=>a.s-b.s);
+    for(let i=0;i<list.length-1;i++){
+      const prev=list[i], dur=list[i+1].s-prev.re;
+      if(dur>=10){
+        const prevTop=(prev.s-startH*60)*PXMIN;
+        const prevBottomPx=prev.hasEnd?prevTop+Math.max((prev.e-prev.s)*PXMIN,28):prevTop+PT_H;
+        const reTopPx=(prev.re-startH*60)*PXMIN;
+        const top=Math.max(reTopPx,prevBottomPx)+1;
+        const hgt=(list[i+1].s-startH*60)*PXMIN-top;
+        if(hgt>6){
+          html+='<div class="gfree" style="top:'+top+'px;height:'+(hgt-1)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
+            (hgt>12?'<span>'+gapLen(dur)+'</span>':'')+'</div>';
+        }
+      }
+    }
+    list.forEach(g=>{
+      const it=g.it, pu=isPickup(it);
+      const top=(g.s-startH*60)*PXMIN;
+      const hgt=g.hasEnd?Math.max((g.e-g.s)*PXMIN,28):PT_H;
+      html+='<div class="gitem '+cls+(pu?' pu':'')+(g.hasEnd?'':' point')+'" data-id="'+it.id+'" '+
+        'style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
+        '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' <span class="gi-car">🚗</span>':'')+' <span class="gi-t">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</span></div>'+
+      '</div>';
+    });
+  });
+  const extra=items.filter(it=>it.day===d.k&&(it.person==='mina'||it.person==='byounggon')&&toMin(it.start)!=null)
+    .sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  extra.forEach(it=>{
+    const p=PEOPLE[it.person], top=(toMin(it.start)-startH*60)*PXMIN;
+    html+='<div class="gitem '+p.cls+'" data-id="'+it.id+'" style="top:'+top+'px;height:24px;left:2px;width:calc(100% - 4px);opacity:.92;z-index:4">'+
+      '<div class="gi-act" style="font-size:10px">'+p.name+' · '+escapeHtml(cleanAct(it.act))+'</div></div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+function gridRange(){
+  let minM=24*60, maxM=0;
+  items.forEach(it=>{
+    const s=toMin(it.start), e=toMin(it.end)||(toMin(it.start)!=null?toMin(it.start)+30:null);
+    if(s!=null){minM=Math.min(minM,s);maxM=Math.max(maxM,e||s+30);}
+  });
+  if(minM>=maxM){minM=13*60;maxM=19*60;}
+  return {startH:Math.floor(minM/60), endH:Math.ceil(maxM/60)};
+}
 function render(){
   buildNav();
   const main=document.getElementById('main');main.innerHTML='';
@@ -564,93 +641,17 @@ function render(){
     return;
   }
   if(current==='all'){
-    const today=todayKey();
-    let minM=24*60, maxM=0;
-    items.forEach(it=>{
-      const s=toMin(it.start), e=toMin(it.end)||(toMin(it.start)!=null?toMin(it.start)+30:null);
-      if(s!=null){minM=Math.min(minM,s);maxM=Math.max(maxM,e||s+30);}
-    });
-    if(minM>=maxM){minM=13*60;maxM=19*60;}
-    const startH=Math.floor(minM/60), endH=Math.ceil(maxM/60);
+    const {startH,endH}=gridRange();
     const PXMIN=1.9;
     const gridH=(endH-startH)*60*PXMIN;
-    // 고정 레인: 소정 | 희정 (민아·병곤은 본인 일정 있을 때 해당 칸 표시)
-    const LANES=[['sojung','소정','s'],['heejung','희정','h']];
     html+='<div class="board-hint">← 좌우로 밀어서 모든 요일 보기 · 회색=쉬는 시간</div>';
     html+='<div class="grid-wrap"><div class="grid" style="height:'+(gridH+58)+'px">';
-    // 시간축
     html+='<div class="grid-times"><div class="gt-head2"></div>';
     for(let hh=startH;hh<endH;hh++){
       html+='<div class="gt-hour" style="height:'+(60*PXMIN)+'px">'+('0'+hh).slice(-2)+'</div>';
     }
     html+='</div>';
-    DAYS.forEach(d=>{
-      html+='<div class="gcol'+(d.k===today?' today':'')+'">';
-      html+='<div class="gcol-h">'+d.pill+'<span class="gd">'+dateForDay(d.k)+'</span></div>';
-      // 레인 헤더 (소정/희정)
-      html+='<div class="lane-head"><span class="lh s">소정</span><span class="lh h">희정</span></div>';
-      html+='<div class="gcol-body" style="height:'+gridH+'px">';
-      for(let hh=startH;hh<endH;hh++){
-        html+='<div class="gline" style="top:'+((hh-startH)*60*PXMIN)+'px"></div>';
-      }
-      // 오늘 칸: 현재 시각선
-      if(d.k===today){
-        const nowMin=new Date().getHours()*60+new Date().getMinutes();
-        if(nowMin>=startH*60&&nowMin<=endH*60){
-          const nt=(nowMin-startH*60)*PXMIN;
-          html+='<div class="now-line" style="top:'+nt+'px"><span class="now-dot"></span></div>';
-        }
-      }
-      // 가운데 레인 구분선
-      html+='<div class="lane-div"></div>';
-      LANES.forEach(([pk,nm,cls],laneI)=>{
-        const leftPct=laneI*50;
-        const PT_H=13; // 끝시간 없는 일정 블록 높이(px) - 아주 슬림
-        const list=items.filter(it=>it.day===d.k&&it.person===pk&&toMin(it.start)!=null)
-          .map(it=>{const s=toMin(it.start);let e=toMin(it.end);const re=(e==null||e<=s)?s:e;if(e==null||e<=s)e=s+25;return {it,s,e,re,hasEnd:!!it.end};})
-          .sort((a,b)=>a.s-b.s);
-        // 빈 시간 블록 먼저 (뒤에 깔리게) — 앞 일정 블록 아래부터 시작
-        const PT_H2=PT_H;
-        for(let i=0;i<list.length-1;i++){
-          const prev=list[i];
-          const dur=list[i+1].s-prev.re;
-          if(dur>=10){
-            // 앞 일정의 시각적 끝(px): 끝시간 있으면 실제 끝, 없으면(point) start+PT_H
-            const prevTop=(prev.s-startH*60)*PXMIN;
-            const prevBottomPx=prev.hasEnd?prevTop+Math.max((prev.e-prev.s)*PXMIN,28):prevTop+PT_H2;
-            const reTopPx=(prev.re-startH*60)*PXMIN;
-            const top=Math.max(reTopPx,prevBottomPx)+1;
-            const bottom=(list[i+1].s-startH*60)*PXMIN;
-            const hgt=bottom-top;
-            if(hgt>6){
-              html+='<div class="gfree" style="top:'+top+'px;height:'+(hgt-1)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
-                (hgt>12?'<span>'+gapLen(dur)+'</span>':'')+
-              '</div>';
-            }
-          }
-        }
-        // 일정 블록 (전부 레인 전체폭, 빈틈 위에 그려짐)
-        list.forEach(g=>{
-          const it=g.it;
-          const pu=isPickup(it);
-          const top=(g.s-startH*60)*PXMIN;
-          const hgt=g.hasEnd?Math.max((g.e-g.s)*PXMIN,28):PT_H;
-          html+='<div class="gitem '+cls+(pu?' pu':'')+(g.hasEnd?'':' point')+'" data-id="'+it.id+'" '+
-            'style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
-            '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' <span class="gi-car">🚗</span>':'')+' <span class="gi-t">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</span></div>'+
-          '</div>';
-        });
-      });
-      // 민아·병곤 일정이 있으면 칸 하단에 칩으로
-      const extra=items.filter(it=>it.day===d.k&&(it.person==='mina'||it.person==='byounggon')&&toMin(it.start)!=null)
-        .sort((a,b)=>(a.start||'').localeCompare(b.start||''));
-      extra.forEach(it=>{
-        const p=PEOPLE[it.person],top=(toMin(it.start)-startH*60)*PXMIN;
-        html+='<div class="gitem '+p.cls+'" data-id="'+it.id+'" style="top:'+top+'px;height:24px;left:2px;width:calc(100% - 4px);opacity:.92;z-index:4">'+
-          '<div class="gi-act" style="font-size:10px">'+p.name+' · '+escapeHtml(cleanAct(it.act))+'</div></div>';
-      });
-      html+='</div></div>';
-    });
+    DAYS.forEach(d=>{ html+=gridColumnHtml(d,startH,endH,PXMIN,true); });
     html+='</div></div>';
     main.innerHTML=html;
     main.querySelectorAll('.gitem').forEach(el=>{el.onclick=()=>openEdit(el.dataset.id);});
@@ -658,12 +659,26 @@ function render(){
   }
   {
     const d=DAYS.find(x=>x.k===current);
-    html='<div class="day-title">'+d.ko+' <span class="dtitle-date">'+dateForDay(current)+'</span><span class="en">'+d.en+'</span></div>';
+    html='<div class="day-title'+(current==='sat'?' sat':current==='sun'?' sun':'')+'">'+d.ko+' <span class="dtitle-date">'+dateForDay(current)+'</span><span class="en">'+d.en+'</span></div>';
     // 소정·희정 빈 시간 요약
     html+=freeBanner(current);
     const tl=timelineFor(current);
     if(tl.length===0){html+='<div class="empty">— 일정이 없습니다 —<br>＋ 버튼으로 추가하세요</div>';main.innerHTML=html;return;}
-    html+='<div class="timeline">'+tl.map(rowHtml).join('')+'</div>';
+    // 격자형 (하루는 넓고 크게)
+    const {startH,endH}=gridRange();
+    const PXMIN=2.4;
+    const gridH=(endH-startH)*60*PXMIN;
+    html+='<div class="grid-wrap day-grid"><div class="grid" style="height:'+(gridH+24)+'px">';
+    html+='<div class="grid-times"><div class="gt-head3"></div>';
+    for(let hh=startH;hh<endH;hh++){
+      html+='<div class="gt-hour" style="height:'+(60*PXMIN)+'px">'+('0'+hh).slice(-2)+'</div>';
+    }
+    html+='</div>';
+    html+=gridColumnHtml(d,startH,endH,PXMIN,false);
+    html+='</div></div>';
+    main.innerHTML=html;
+    main.querySelectorAll('.gitem').forEach(el=>{el.onclick=()=>openEdit(el.dataset.id);});
+    return;
   }
   main.innerHTML=html;
   bindCards(main);
