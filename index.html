@@ -125,23 +125,25 @@
   /* 시간축 격자 */
   .grid-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--card);}
   .grid{display:flex;min-width:max-content;position:relative;}
-  .grid-times{flex:0 0 30px;position:sticky;left:0;z-index:3;background:var(--card);border-right:1px solid var(--line);}
-  .gt-head2{height:58px;border-bottom:1px solid var(--line);}
-  .gt-head3{height:24px;border-bottom:1px solid var(--line);}
+  .grid-times{flex:0 0 30px;position:sticky;left:0;z-index:5;background:var(--card);border-right:1px solid var(--line);}
+  .gt-head2{height:58px;border-bottom:1px solid var(--line);position:sticky;top:64px;background:var(--card);z-index:6;}
+  .gt-head3{height:24px;border-bottom:1px solid var(--line);position:sticky;top:64px;background:var(--card);z-index:6;}
   .day-grid .grid{min-width:0;width:100%;}
   .day-grid .gcol{flex:1;}
+  .day-grid .lane-head{top:64px;}
+  .day-grid .gt-head3{top:64px;}
   .gt-hour{font-size:11px;color:#9a917c;text-align:center;padding-top:2px;box-sizing:border-box;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;font-weight:700;}
   .gcol{flex:0 0 150px;border-right:1px solid var(--line);position:relative;}
   .gcol:last-child{border-right:none;}
   .gcol.today{background:#fcecea;}
-  .gcol-h{height:34px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:14px;font-weight:700;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:2;}
+  .gcol-h{height:34px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:14px;font-weight:700;border-bottom:1px solid var(--line);position:sticky;top:64px;background:var(--card);z-index:4;}
   .gcol.today .gcol-h{background:#fcecea;}
   .gcol-h.sat{color:#2f6fd0;}
   .gcol-h.sun{color:#e0463e;}
   .day-title.sat{color:#2f6fd0;}
   .day-title.sun{color:#e0463e;}
   .gcol-h .gd{font-size:11px;color:#9a917c;font-weight:400;}
-  .lane-head{height:24px;display:flex;border-bottom:1px solid var(--line);}
+  .lane-head{height:24px;display:flex;border-bottom:1px solid var(--line);position:sticky;top:98px;background:var(--card);z-index:4;}
   .lane-head .lh{flex:1;text-align:center;font-size:10px;font-weight:700;line-height:24px;color:#fff;}
   .lane-head .lh.s{background:var(--sojung);}
   .lane-head .lh.h{background:var(--heejung);}
@@ -345,7 +347,7 @@ async function boot(){
   document.getElementById('app').style.display='block';
   setPerson('sojung');
   loadPhoto();
-  await refresh(true);
+  await refresh(true,true);
   // 주기적 자동 동기화 (15초)
   setInterval(()=>refresh(false),15000);
 }
@@ -389,17 +391,26 @@ document.getElementById('profileFile').onchange=function(){
   };
   reader.readAsDataURL(f);
 };
-async function refresh(seedIfEmpty){
+let lastSig='';
+function itemsSig(arr){
+  // 변경 감지용 간단 시그니처
+  return arr.map(it=>it.id+'|'+it.day+'|'+it.person+'|'+it.start+'|'+it.end+'|'+it.act+'|'+it.loc+'|'+it.hw).sort().join('#');
+}
+async function refresh(seedIfEmpty, force){
   setSync('busy');
   try{
-    items=await apiList();
-    if(seedIfEmpty && items.length===0){
+    const fresh=await apiList();
+    if(seedIfEmpty && fresh.length===0){
       await apiPost('seed',{items:SEED});
       items=await apiList();
       toast('초기 일정을 시트에 저장했어요');
+      lastSig=itemsSig(items);setSync('ok');render();return;
     }
+    const sig=itemsSig(fresh);
+    items=fresh;
     setSync('ok');
-    render();
+    // 데이터가 실제로 바뀌었거나, 강제 새로고침일 때만 다시 그림
+    if(force || sig!==lastSig){lastSig=sig;render();}
   }catch(e){setSync('off');toast('연결 실패 — 주소 확인');}
 }
 
@@ -812,7 +823,7 @@ document.getElementById('mCopy').onclick=async()=>{
   setSync('ok');closeModal();render();toast(picks.length+'개 요일로 복사됨');
 };
 
-document.getElementById('reloadBtn').onclick=()=>refresh(false);
+document.getElementById('reloadBtn').onclick=()=>refresh(false,true);
 document.getElementById('shareBtn').onclick=()=>{
   const link=location.origin+location.pathname+'?api='+encodeURIComponent(API);
   if(navigator.share){navigator.share({title:'우리집 스케줄',text:'우리 가족 주간 스케줄이야. 이 링크로 열면 바로 보여:',url:link}).catch(()=>copyText(link));}
