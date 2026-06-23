@@ -146,7 +146,8 @@
   .gitem.h{background:var(--heejung);}
   .gitem.m{background:var(--mina);}
   .gitem.b{background:var(--byounggon);}
-  .gitem.pu{outline:2px solid #fff;outline-offset:-3px;}
+  .gitem.pu{outline:2.5px solid #ffd23f;outline-offset:-2px;box-shadow:0 0 0 1px #e0463e,0 1px 3px -1px rgba(0,0,0,.3);}
+  .gi-car{display:inline-block;background:#ffd23f;color:#7a3a00;font-size:9px;font-weight:800;border-radius:4px;padding:0 3px;margin-left:2px;}
   .gi-act{font-size:11px;font-weight:700;word-break:keep-all;line-height:1.2;}
   .gi-t{font-size:9px;font-weight:700;opacity:.85;white-space:nowrap;}
   .gitem.point{padding:0 5px;display:flex;align-items:center;box-shadow:none;}
@@ -636,7 +637,7 @@ function render(){
           const hgt=g.hasEnd?Math.max((g.e-g.s)*PXMIN,28):PT_H;
           html+='<div class="gitem '+cls+(pu?' pu':'')+(g.hasEnd?'':' point')+'" data-id="'+it.id+'" '+
             'style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
-            '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' 🚗':'')+' <span class="gi-t">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</span></div>'+
+            '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' <span class="gi-car">🚗</span>':'')+' <span class="gi-t">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</span></div>'+
           '</div>';
         });
       });
