@@ -149,9 +149,9 @@
   .gitem.pu{outline:2px solid #fff;outline-offset:-3px;}
   .gi-act{font-size:11px;font-weight:700;word-break:keep-all;line-height:1.2;}
   .gi-t{font-size:9px;font-weight:700;opacity:.85;white-space:nowrap;}
-  .gitem.point{padding:2px 5px;display:flex;align-items:center;box-shadow:none;opacity:.96;}
+  .gitem.point{padding:1px 5px;display:flex;align-items:center;box-shadow:none;}
   .gitem.point .gi-act{font-size:10px;}
-  .gfree{position:absolute;border-radius:6px;background:repeating-linear-gradient(45deg,#eee9dd,#eee9dd 5px,#e6e0d2 5px,#e6e0d2 10px);box-sizing:border-box;display:flex;align-items:center;justify-content:center;z-index:1;}
+  .gfree{position:absolute;border-radius:6px;background:repeating-linear-gradient(45deg,#eee9dd,#eee9dd 5px,#e6e0d2 5px,#e6e0d2 10px);box-sizing:border-box;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;z-index:1;}
   .gfree span{font-size:9px;color:#9a8f78;font-weight:700;}
   .now-line{position:absolute;left:0;right:0;height:0;border-top:2px solid #e0463e;z-index:5;}
   .now-dot{position:absolute;left:-3px;top:-4px;width:7px;height:7px;border-radius:50%;background:#e0463e;}
@@ -604,33 +604,31 @@ function render(){
       html+='<div class="lane-div"></div>';
       LANES.forEach(([pk,nm,cls],laneI)=>{
         const leftPct=laneI*50;
+        const PT_H=20; // 끝시간 없는 일정 블록 높이(px) - 슬림
         const list=items.filter(it=>it.day===d.k&&it.person===pk&&toMin(it.start)!=null)
-          .map(it=>{const s=toMin(it.start);let e=toMin(it.end);const re=(e==null||e<=s)?s:e;if(e==null||e<=s)e=s+25;return {it,s,e,re};})
+          .map(it=>{const s=toMin(it.start);let e=toMin(it.end);const re=(e==null||e<=s)?s:e;if(e==null||e<=s)e=s+25;return {it,s,e,re,hasEnd:!!it.end};})
           .sort((a,b)=>a.s-b.s);
-        // 일정 블록
-        list.forEach(g=>{
-          const it=g.it,p=PEOPLE[it.person]||{cls:cls,name:nm};
-          const pu=isPickup(it);
-          const hasEnd=!!it.end;
-          const top=(g.s-startH*60)*PXMIN;
-          // 끝시간 있으면 그 길이만큼, 없으면 작은 고정 블록(빈틈 안 가림)
-          const hgt=hasEnd?Math.max((g.e-g.s)*PXMIN,28):24;
-          const wExpr=hasEnd?'calc(50% - 4px)':'calc(30% - 2px)';
-          html+='<div class="gitem '+cls+(pu?' pu':'')+(hasEnd?'':' point')+'" data-id="'+it.id+'" '+
-            'style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:'+wExpr+'">'+
-            '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' 🚗':'')+' <span class="gi-t">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</span></div>'+
-          '</div>';
-        });
-        // 빈 시간 블록 (일정 사이, 11분 이상) — 실제 끝시간(re) 기준
+        // 빈 시간 블록 먼저 (뒤에 깔리게) — 실제 끝시간(re) 기준
         for(let i=0;i<list.length-1;i++){
-          const gapS=list[i].re, gapE=list[i+1].s, dur=gapE-gapS;
+          const dur=list[i+1].s-list[i].re;
           if(dur>10){
-            const top=(gapS-startH*60)*PXMIN, hgt=dur*PXMIN;
+            const top=(list[i].re-startH*60)*PXMIN, hgt=dur*PXMIN;
             html+='<div class="gfree" style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
-              (hgt>26?'<span>'+gapLen(dur)+'</span>':'')+
+              (hgt>22?'<span>'+gapLen(dur)+' 휴식</span>':'')+
             '</div>';
           }
         }
+        // 일정 블록 (전부 레인 전체폭, 빈틈 위에 그려짐)
+        list.forEach(g=>{
+          const it=g.it;
+          const pu=isPickup(it);
+          const top=(g.s-startH*60)*PXMIN;
+          const hgt=g.hasEnd?Math.max((g.e-g.s)*PXMIN,28):PT_H;
+          html+='<div class="gitem '+cls+(pu?' pu':'')+(g.hasEnd?'':' point')+'" data-id="'+it.id+'" '+
+            'style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
+            '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' 🚗':'')+' <span class="gi-t">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</span></div>'+
+          '</div>';
+        });
       });
       // 민아·병곤 일정이 있으면 칸 하단에 칩으로
       const extra=items.filter(it=>it.day===d.k&&(it.person==='mina'||it.person==='byounggon')&&toMin(it.start)!=null)
