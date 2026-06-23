@@ -603,9 +603,13 @@ function gridColumnHtml(d, startH, endH, PXMIN, showHeader){
   const extra=items.filter(it=>it.day===d.k&&(it.person==='mina'||it.person==='byounggon')&&toMin(it.start)!=null)
     .sort((a,b)=>(a.start||'').localeCompare(b.start||''));
   extra.forEach(it=>{
-    const p=PEOPLE[it.person], top=(toMin(it.start)-startH*60)*PXMIN;
-    html+='<div class="gitem '+p.cls+'" data-id="'+it.id+'" style="top:'+top+'px;height:24px;left:2px;width:calc(100% - 4px);opacity:.92;z-index:3">'+
-      '<div class="gi-act" style="font-size:10px">'+p.name+' · '+escapeHtml(cleanAct(it.act))+'</div></div>';
+    const p=PEOPLE[it.person];
+    const s=toMin(it.start);let e=toMin(it.end);const hasEnd=!!it.end&&e>s;
+    const top=(s-startH*60)*PXMIN;
+    const hgt=hasEnd?Math.max((e-s)*PXMIN,24):24;
+    const pu=isPickup(it);
+    html+='<div class="gitem '+p.cls+(pu?' pu':'')+'" data-id="'+it.id+'" style="top:'+top+'px;height:'+(hgt-2)+'px;left:2px;width:calc(100% - 4px);opacity:.94;z-index:3">'+
+      '<div class="gi-act" style="font-size:10px">'+p.name+' · '+escapeHtml(cleanAct(it.act))+(pu?' <span class="gi-car">🚗</span>':'')+' <span class="gi-t">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</span></div></div>';
   });
   html+='</div></div>';
   return html;
