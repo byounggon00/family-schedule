@@ -149,8 +149,12 @@
   .gitem.pu{outline:2px solid #fff;outline-offset:-3px;}
   .gi-act{font-size:11px;font-weight:700;word-break:keep-all;line-height:1.2;}
   .gi-t{font-size:9px;font-weight:700;opacity:.85;white-space:nowrap;}
+  .gitem.point{padding:2px 5px;display:flex;align-items:center;box-shadow:none;opacity:.96;}
+  .gitem.point .gi-act{font-size:10px;}
   .gfree{position:absolute;border-radius:6px;background:repeating-linear-gradient(45deg,#eee9dd,#eee9dd 5px,#e6e0d2 5px,#e6e0d2 10px);box-sizing:border-box;display:flex;align-items:center;justify-content:center;z-index:1;}
   .gfree span{font-size:9px;color:#9a8f78;font-weight:700;}
+  .now-line{position:absolute;left:0;right:0;height:0;border-top:2px solid #e0463e;z-index:5;}
+  .now-dot{position:absolute;left:-3px;top:-4px;width:7px;height:7px;border-radius:50%;background:#e0463e;}
   /* 픽업 표시 (진하게 강조) */
   .bitem.pu{background:#f6d9c4;border-left-width:5px;}
   .bitem.pu .bt{color:#a84a1f;}
@@ -588,29 +592,38 @@ function render(){
       for(let hh=startH;hh<endH;hh++){
         html+='<div class="gline" style="top:'+((hh-startH)*60*PXMIN)+'px"></div>';
       }
+      // 오늘 칸: 현재 시각선
+      if(d.k===today){
+        const nowMin=new Date().getHours()*60+new Date().getMinutes();
+        if(nowMin>=startH*60&&nowMin<=endH*60){
+          const nt=(nowMin-startH*60)*PXMIN;
+          html+='<div class="now-line" style="top:'+nt+'px"><span class="now-dot"></span></div>';
+        }
+      }
       // 가운데 레인 구분선
       html+='<div class="lane-div"></div>';
       LANES.forEach(([pk,nm,cls],laneI)=>{
         const leftPct=laneI*50;
         const list=items.filter(it=>it.day===d.k&&it.person===pk&&toMin(it.start)!=null)
-          .map(it=>{const s=toMin(it.start);let e=toMin(it.end);if(e==null||e<=s)e=s+25;return {it,s,e};})
+          .map(it=>{const s=toMin(it.start);let e=toMin(it.end);const re=(e==null||e<=s)?s:e;if(e==null||e<=s)e=s+25;return {it,s,e,re};})
           .sort((a,b)=>a.s-b.s);
         // 일정 블록
         list.forEach(g=>{
           const it=g.it,p=PEOPLE[it.person]||{cls:cls,name:nm};
           const pu=isPickup(it);
-          const top=(g.s-startH*60)*PXMIN, hgt=Math.max((g.e-g.s)*PXMIN,28);
-          // 정시(00분)나 30분에 시작하지 않으면 시간 라벨 추가
-          const offGrid=(g.s%30!==0);
-          const timeLabel=offGrid?' <span class="gi-t">'+escapeHtml(it.start||'')+'</span>':'';
-          html+='<div class="gitem '+cls+(pu?' pu':'')+'" data-id="'+it.id+'" '+
-            'style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
-            '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' 🚗':'')+timeLabel+'</div>'+
+          const hasEnd=!!it.end;
+          const top=(g.s-startH*60)*PXMIN;
+          // 끝시간 있으면 그 길이만큼, 없으면 작은 고정 블록(빈틈 안 가림)
+          const hgt=hasEnd?Math.max((g.e-g.s)*PXMIN,28):24;
+          const wExpr=hasEnd?'calc(50% - 4px)':'calc(30% - 2px)';
+          html+='<div class="gitem '+cls+(pu?' pu':'')+(hasEnd?'':' point')+'" data-id="'+it.id+'" '+
+            'style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:'+wExpr+'">'+
+            '<div class="gi-act">'+escapeHtml(cleanAct(it.act))+(pu?' 🚗':'')+' <span class="gi-t">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</span></div>'+
           '</div>';
         });
-        // 빈 시간 블록 (일정 사이, 11분 이상)
+        // 빈 시간 블록 (일정 사이, 11분 이상) — 실제 끝시간(re) 기준
         for(let i=0;i<list.length-1;i++){
-          const gapS=list[i].e, gapE=list[i+1].s, dur=gapE-gapS;
+          const gapS=list[i].re, gapE=list[i+1].s, dur=gapE-gapS;
           if(dur>10){
             const top=(gapS-startH*60)*PXMIN, hgt=dur*PXMIN;
             html+='<div class="gfree" style="top:'+top+'px;height:'+(hgt-2)+'px;left:calc('+leftPct+'% + 2px);width:calc(50% - 4px)">'+
