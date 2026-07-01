@@ -217,12 +217,10 @@
 <header>
   <div class="head-left">
     <p class="eyebrow"><span class="sync-dot off" id="syncDot"></span><span id="syncLabel">연결 안 됨</span></p>
-    <h1>우리집 주간 스케줄</h1>
+    <h1>정자매 주간 스케줄</h1>
     <div class="legend">
       <span><i class="dot d-s"></i>소정</span>
       <span><i class="dot d-h"></i>희정</span>
-      <span><i class="dot d-m"></i>민아</span>
-      <span><i class="dot d-b"></i>병곤</span>
     </div>
   </div>
   <button class="profile" id="profileBtn" title="가족 사진">
@@ -261,8 +259,6 @@
     <div class="seg" id="segPerson">
       <button data-p="sojung" class="p-s">소정</button>
       <button data-p="heejung" class="p-h">희정</button>
-      <button data-p="mina" class="p-m">민아</button>
-      <button data-p="byounggon" class="p-b">병곤</button>
     </div>
     <div class="row2">
       <div><label>시작</label><input type="time" id="mStart"></div>
@@ -310,7 +306,8 @@ const SEED=[
 ].map(r=>({day:r[0],person:r[1],start:r[2],end:r[3],act:r[4],loc:r[5]}));
 
 const API_KEY='family_schedule_api';
-let API='', items=[], current='all', editCtx=null, pickPerson='sojung';
+let API='', items=[], current=todayKeyInit(), editCtx=null, pickPerson='sojung';
+function todayKeyInit(){const map=['sun','mon','tue','wed','thu','fri','sat'];const t=map[new Date().getDay()];return ['mon','tue','wed','thu','fri','sat','sun'].includes(t)?t:'mon';}
 
 // ---- API helpers ----
 function getApiFromUrl(){
@@ -600,23 +597,12 @@ function gridColumnHtml(d, startH, endH, PXMIN, showHeader){
       '</div>';
     });
   });
-  const extra=items.filter(it=>it.day===d.k&&(it.person==='mina'||it.person==='byounggon')&&toMin(it.start)!=null)
-    .sort((a,b)=>(a.start||'').localeCompare(b.start||''));
-  extra.forEach(it=>{
-    const p=PEOPLE[it.person];
-    const s=toMin(it.start);let e=toMin(it.end);const hasEnd=!!it.end&&e>s;
-    const top=(s-startH*60)*PXMIN;
-    const hgt=hasEnd?Math.max((e-s)*PXMIN,24):24;
-    const pu=isPickup(it);
-    html+='<div class="gitem '+p.cls+(pu?' pu':'')+'" data-id="'+it.id+'" style="top:'+top+'px;height:'+(hgt-2)+'px;left:2px;width:calc(100% - 4px);opacity:.94;z-index:3">'+
-      '<div class="gi-act" style="font-size:10px">'+p.name+' · '+escapeHtml(cleanAct(it.act))+(pu?' <span class="gi-car">🚗</span>':'')+' <span class="gi-t">'+escapeHtml(it.start||'')+(it.end?'~'+escapeHtml(it.end):'')+'</span></div></div>';
-  });
   html+='</div></div>';
   return html;
 }
 function gridRange(){
   let minM=24*60, maxM=0;
-  items.forEach(it=>{
+  items.filter(it=>it.person==='sojung'||it.person==='heejung').forEach(it=>{
     const s=toMin(it.start), e=toMin(it.end)||(toMin(it.start)!=null?toMin(it.start)+30:null);
     if(s!=null){minM=Math.min(minM,s);maxM=Math.max(maxM,e||s+30);}
   });
